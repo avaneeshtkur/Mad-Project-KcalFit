@@ -62,7 +62,13 @@ fun NavGraph(
             composable(Screen.AddFood.route) {
                 AddFoodScreen(
                     onAddFoodSubmit = { foodName, mealType, calories, quantity, date ->
-                        viewModel.addFoodEntry(foodName, mealType, calories, quantity, date)
+                        viewModel.addFoodEntry(
+                            foodName = foodName,
+                            mealType = mealType,
+                            calories = calories,
+                            quantity = quantity,
+                            date = date
+                        )
                         navController.popBackStack()
                     },
                     onNavigateBack = {

@@ -21,7 +21,7 @@ data class UserEntity(
     val fitnessGoal: String = "LOSE_WEIGHT", // LOSE_WEIGHT, MAINTAIN, GAIN_WEIGHT
     val weeklyTargetKg: Double = 0.5,
     val units: String = "METRIC", // METRIC, IMPERIAL
-    val dietaryPreference: String = "NONE", // NONE, VEGETARIAN, VEGAN, KETO, PALEO, KOSHER, HALAL
+    val dietaryPreference: String = "STANDARD", // STANDARD, HIGH_PROTEIN, KETO, VEGAN, VEGETARIAN, MEDITERRANEAN
     val allergies: String = "",
     val dailyCalorieGoal: Int = 2000,
     val targetProteinGrams: Int = 150,
@@ -29,5 +29,13 @@ data class UserEntity(
     val targetFatGrams: Int = 65,
     val targetWaterMl: Int = 2500,
     val currentStreakDays: Int = 1,
-    val lastLoggedDate: String = ""
+    val lastLoggedDate: String = "",
+    // Phase 1 Extended Fields:
+    val firebaseUid: String = "",
+    val workoutFrequency: String = "3",
+    val workoutDuration: String = "45",
+    val workoutLocation: String = "GYM",
+    val fitnessExperience: String = "BEGINNER",
+    val workoutPlanTitle: String = "3-Day Full Body Foundation",
+    val workoutPlanDescription: String = "A balanced foundational routine for consistency and strength."
 )

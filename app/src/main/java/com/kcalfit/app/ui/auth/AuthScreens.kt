@@ -27,6 +27,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +36,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,6 +49,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.kcalfit.app.ui.viewmodel.AuthViewModel
 
 @Composable
 fun WelcomeScreen(
@@ -113,7 +116,7 @@ fun WelcomeScreen(
                 )
             ) {
                 Text(
-                    text = "Get Started / Create Account",
+                    text = "Get Started",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -140,15 +143,17 @@ fun WelcomeScreen(
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: (email: String) -> Unit,
+    authViewModel: AuthViewModel,
+    onLoginSuccess: () -> Unit,
     onNavigateToRegister: () -> Unit,
     onNavigateToForgotPassword: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val uiState by authViewModel.uiState.collectAsState()
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = modifier
@@ -158,14 +163,24 @@ fun LoginScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = Icons.Default.FitnessCenter,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(56.dp)
-        )
+        Box(
+            modifier = Modifier
+                .size(72.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.FitnessCenter,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(40.dp)
+            )
+        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         Text(
             text = "Login to Cal Fit",
@@ -173,7 +188,15 @@ fun LoginScreen(
             fontWeight = FontWeight.Bold
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = "Enter your credentials to continue your health journey",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 6.dp)
+        )
+
+        Spacer(modifier = Modifier.height(28.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -189,7 +212,7 @@ fun LoginScreen(
                     value = email,
                     onValueChange = {
                         email = it
-                        errorMessage = null
+                        authViewModel.clearError()
                     },
                     label = { Text("Email Address") },
                     leadingIcon = { Icon(imageVector = Icons.Default.Email, contentDescription = null) },
@@ -202,7 +225,7 @@ fun LoginScreen(
                     value = password,
                     onValueChange = {
                         password = it
-                        errorMessage = null
+                        authViewModel.clearError()
                     },
                     label = { Text("Password") },
                     leadingIcon = { Icon(imageVector = Icons.Default.Lock, contentDescription = null) },
@@ -221,7 +244,7 @@ fun LoginScreen(
                     shape = RoundedCornerShape(12.dp)
                 )
 
-                errorMessage?.let {
+                uiState.error?.let {
                     Text(
                         text = it,
                         style = MaterialTheme.typography.bodySmall,
@@ -240,21 +263,28 @@ fun LoginScreen(
 
                 Button(
                     onClick = {
-                        if (email.isBlank() || !email.contains("@")) {
-                            errorMessage = "Please enter a valid email address"
-                        } else if (password.length < 4) {
-                            errorMessage = "Password must be at least 4 characters"
-                        } else {
-                            onLoginSuccess(email.trim())
-                        }
+                        authViewModel.login(email, password, onSuccess = onLoginSuccess)
                     },
+                    enabled = !uiState.isLoading,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text("Login", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            "Login",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
@@ -272,15 +302,19 @@ fun LoginScreen(
 
 @Composable
 fun RegisterScreen(
-    onRegisterSuccess: (name: String, email: String) -> Unit,
+    authViewModel: AuthViewModel,
+    onRegisterSuccess: () -> Unit,
     onNavigateToLogin: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val uiState by authViewModel.uiState.collectAsState()
+
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var showPassword by remember { mutableStateOf(false) }
+    var localError by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = modifier
@@ -294,6 +328,14 @@ fun RegisterScreen(
             text = "Create Cal Fit Account",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
+        )
+
+        Text(
+            text = "Sign up to track nutrition and personalized workouts",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 6.dp)
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -310,7 +352,11 @@ fun RegisterScreen(
             ) {
                 OutlinedTextField(
                     value = name,
-                    onValueChange = { name = it; errorMessage = null },
+                    onValueChange = {
+                        name = it
+                        localError = null
+                        authViewModel.clearError()
+                    },
                     label = { Text("Full Name") },
                     leadingIcon = { Icon(imageVector = Icons.Default.Person, contentDescription = null) },
                     singleLine = true,
@@ -320,7 +366,11 @@ fun RegisterScreen(
 
                 OutlinedTextField(
                     value = email,
-                    onValueChange = { email = it; errorMessage = null },
+                    onValueChange = {
+                        email = it
+                        localError = null
+                        authViewModel.clearError()
+                    },
                     label = { Text("Email Address") },
                     leadingIcon = { Icon(imageVector = Icons.Default.Email, contentDescription = null) },
                     singleLine = true,
@@ -330,10 +380,23 @@ fun RegisterScreen(
 
                 OutlinedTextField(
                     value = password,
-                    onValueChange = { password = it; errorMessage = null },
-                    label = { Text("Password") },
+                    onValueChange = {
+                        password = it
+                        localError = null
+                        authViewModel.clearError()
+                    },
+                    label = { Text("Password (min 6 characters)") },
                     leadingIcon = { Icon(imageVector = Icons.Default.Lock, contentDescription = null) },
-                    visualTransformation = PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { showPassword = !showPassword }) {
+                            Icon(
+                                imageVector = if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = "Toggle password visibility"
+                            )
+                        }
+                    },
+                    visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -341,36 +404,60 @@ fun RegisterScreen(
 
                 OutlinedTextField(
                     value = confirmPassword,
-                    onValueChange = { confirmPassword = it; errorMessage = null },
+                    onValueChange = {
+                        confirmPassword = it
+                        localError = null
+                        authViewModel.clearError()
+                    },
                     label = { Text("Confirm Password") },
                     leadingIcon = { Icon(imageVector = Icons.Default.Lock, contentDescription = null) },
-                    visualTransformation = PasswordVisualTransformation(),
+                    visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 )
 
-                errorMessage?.let {
+                val displayError = localError ?: uiState.error
+                displayError?.let {
                     Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                 }
 
                 Button(
                     onClick = {
                         when {
-                            name.isBlank() -> errorMessage = "Please enter your name"
-                            email.isBlank() || !email.contains("@") -> errorMessage = "Please enter a valid email"
-                            password.length < 4 -> errorMessage = "Password must be at least 4 characters"
-                            password != confirmPassword -> errorMessage = "Passwords do not match"
-                            else -> onRegisterSuccess(name.trim(), email.trim())
+                            name.isBlank() -> localError = "Please enter your name"
+                            email.isBlank() || !email.contains("@") -> localError = "Please enter a valid email"
+                            password.length < 6 -> localError = "Password must be at least 6 characters"
+                            password != confirmPassword -> localError = "Passwords do not match"
+                            else -> authViewModel.register(
+                                email = email,
+                                password = password,
+                                displayName = name,
+                                onSuccess = onRegisterSuccess
+                            )
                         }
                     },
+                    enabled = !uiState.isLoading,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text("Continue to Onboarding", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            "Continue to Onboarding",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
@@ -388,11 +475,12 @@ fun RegisterScreen(
 
 @Composable
 fun ForgotPasswordScreen(
+    authViewModel: AuthViewModel,
     onNavigateBackToLogin: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val uiState by authViewModel.uiState.collectAsState()
     var email by remember { mutableStateOf("") }
-    var sentMessage by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = modifier
@@ -414,7 +502,11 @@ fun ForgotPasswordScreen(
 
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = {
+                email = it
+                authViewModel.clearError()
+                authViewModel.clearSuccessMessage()
+            },
             label = { Text("Email Address") },
             leadingIcon = { Icon(imageVector = Icons.Default.Email, contentDescription = null) },
             singleLine = true,
@@ -424,23 +516,35 @@ fun ForgotPasswordScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        sentMessage?.let {
-            Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+        uiState.error?.let {
+            Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        uiState.successMessage?.let {
+            Text(text = it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.height(16.dp))
         }
 
         Button(
             onClick = {
-                if (email.contains("@")) {
-                    sentMessage = "Password reset email sent to $email!"
-                }
+                authViewModel.resetPassword(email) {}
             },
+            enabled = !uiState.isLoading,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
             shape = RoundedCornerShape(14.dp)
         ) {
-            Text("Send Reset Link", fontWeight = FontWeight.Bold)
+            if (uiState.isLoading) {
+                CircularProgressIndicator(
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text("Send Reset Link", fontWeight = FontWeight.Bold)
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))

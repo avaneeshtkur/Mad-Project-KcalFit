@@ -3,13 +3,15 @@ package com.kcalfit.app.data.model
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "food_entries")
-data class FoodEntry(
+@Entity(tableName = "master_foods")
+data class FoodItemEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val foodName: String,
+    val name: String,
     val brand: String = "Generic",
-    val mealType: String,
+    val category: String = "General",
+    val servingSize: Double = 1.0,
+    val servingUnit: String = "serving",
     val calories: Int,
     val proteinGrams: Double = 0.0,
     val carbsGrams: Double = 0.0,
@@ -17,7 +19,7 @@ data class FoodEntry(
     val fiberGrams: Double = 0.0,
     val sugarGrams: Double = 0.0,
     val sodiumMg: Double = 0.0,
-    val quantity: String = "1 serving",
-    val date: String, // Format: YYYY-MM-DD
-    val timestamp: Long = System.currentTimeMillis()
+    val barcode: String? = null,
+    val isCustom: Boolean = false,
+    val isFavorite: Boolean = false
 )

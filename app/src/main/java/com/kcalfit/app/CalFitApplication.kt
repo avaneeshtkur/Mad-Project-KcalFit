@@ -10,7 +10,14 @@ class CalFitApplication : Application() {
     val database: AppDatabase by lazy { AppDatabase.getDatabase(this) }
     val userPreferences: UserPreferences by lazy { UserPreferences(this) }
     val repository: FoodRepository by lazy {
-        FoodRepository(database.foodEntryDao(), userPreferences)
+        FoodRepository(
+            foodEntryDao = database.foodEntryDao(),
+            userDao = database.userDao(),
+            foodItemDao = database.foodItemDao(),
+            exerciseDao = database.exerciseDao(),
+            lifestyleDao = database.lifestyleDao(),
+            userPreferences = userPreferences
+        )
     }
 
     override fun onCreate() {

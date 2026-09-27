@@ -253,7 +253,17 @@ class CalFitViewModel(
         }
     }
 
-    fun addFoodEntry(foodName: String, brand: String, mealType: String, calories: Int, protein: Double, carbs: Double, fat: Double, quantity: String, date: String) {
+    fun addFoodEntry(
+        foodName: String,
+        brand: String = "Generic",
+        mealType: String,
+        calories: Int,
+        protein: Double = 0.0,
+        carbs: Double = 0.0,
+        fat: Double = 0.0,
+        quantity: String = "1 serving",
+        date: String
+    ) {
         viewModelScope.launch {
             repository.insertFoodEntry(
                 FoodEntry(

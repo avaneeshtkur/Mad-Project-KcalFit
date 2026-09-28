@@ -10,7 +10,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
+import com.kcalfit.app.ui.auth.AuthViewModel
+import com.kcalfit.app.ui.auth.AuthViewModelFactory
 import com.kcalfit.app.ui.navigation.NavGraph
+import com.kcalfit.app.ui.onboarding.OnboardingViewModel
+import com.kcalfit.app.ui.onboarding.OnboardingViewModelFactory
 import com.kcalfit.app.ui.theme.CalFitTheme
 import com.kcalfit.app.ui.viewmodel.CalFitViewModel
 import com.kcalfit.app.ui.viewmodel.CalFitViewModelFactory
@@ -22,9 +26,21 @@ class MainActivity : ComponentActivity() {
         CalFitViewModelFactory(app.repository)
     }
 
+    private val authViewModel: AuthViewModel by viewModels {
+        val app = application as CalFitApplication
+        AuthViewModelFactory(app.authRepository)
+    }
+
+    private val onboardingViewModel: OnboardingViewModel by viewModels {
+        val app = application as CalFitApplication
+        OnboardingViewModelFactory(app.repository, app.userPreferences)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        val app = application as CalFitApplication
 
         setContent {
             CalFitTheme {
@@ -35,7 +51,10 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     NavGraph(
                         navController = navController,
-                        viewModel = viewModel
+                        viewModel = viewModel,
+                        authViewModel = authViewModel,
+                        onboardingViewModel = onboardingViewModel,
+                        userPreferences = app.userPreferences
                     )
                 }
             }

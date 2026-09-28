@@ -57,18 +57,6 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        val MIGRATION_2_3 = object : androidx.room.migration.Migration(2, 3) {
-            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE user_profile ADD COLUMN firebaseUid TEXT NOT NULL DEFAULT ''")
-                db.execSQL("ALTER TABLE user_profile ADD COLUMN workoutFrequency TEXT NOT NULL DEFAULT '3'")
-                db.execSQL("ALTER TABLE user_profile ADD COLUMN workoutDuration TEXT NOT NULL DEFAULT '45'")
-                db.execSQL("ALTER TABLE user_profile ADD COLUMN workoutLocation TEXT NOT NULL DEFAULT 'GYM'")
-                db.execSQL("ALTER TABLE user_profile ADD COLUMN fitnessExperience TEXT NOT NULL DEFAULT 'BEGINNER'")
-                db.execSQL("ALTER TABLE user_profile ADD COLUMN workoutPlanTitle TEXT NOT NULL DEFAULT '3-Day Full Body Foundation'")
-                db.execSQL("ALTER TABLE user_profile ADD COLUMN workoutPlanDescription TEXT NOT NULL DEFAULT 'A balanced foundational routine for consistency and strength.'")
-            }
-        }
-
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -76,7 +64,6 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "cal_fit_database"
                 )
-                    .addMigrations(MIGRATION_2_3)
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance

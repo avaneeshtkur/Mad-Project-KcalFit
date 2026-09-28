@@ -3,199 +3,81 @@ package com.kcalfit.app.data.repository
 import com.kcalfit.app.data.local.UserDao
 import com.kcalfit.app.data.model.UserEntity
 import com.kcalfit.app.data.preferences.UserPreferences
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.security.MessageDigest
-import java.util.UUID
 
-sealed class AuthResult<out T> {
-    data class Success<out T>(val data: T) : AuthResult<T>()
-    data class Error(val message: String) : AuthResult<Nothing>()
-}
-
-data class AuthUser(
-    val uid: String,
-    val email: String,
-    val displayName: String
-)
-
-interface AuthRepository {
-    suspend fun login(email: String, password: String): AuthResult<AuthUser>
-    suspend fun register(email: String, password: String, displayName: String): AuthResult<AuthUser>
-    suspend fun resetPassword(email: String): AuthResult<Unit>
-    suspend fun logout()
-    fun isUserLoggedIn(): Boolean
-    fun isOnboardingCompleted(): Boolean
-    fun getCurrentUser(): AuthUser?
-    fun getCurrentUserId(): String?
-}
-
-class LocalAuthRepository(
+class AuthRepository(
     private val userDao: UserDao,
     private val userPreferences: UserPreferences
-) : AuthRepository {
+) {
 
+    // --- Password Hashing ---
     private fun hashPassword(password: String): String {
         val bytes = MessageDigest.getInstance("SHA-256").digest(password.toByteArray())
         return bytes.joinToString("") { "%02x".format(it) }
     }
 
-    override suspend fun login(email: String, password: String): AuthResult<AuthUser> =
-        withContext(Dispatchers.IO) {
-            try {
-                val cleanEmail = email.trim().lowercase()
-                val cleanPass = password.trim()
+    // --- Register ---
+    suspend fun register(name: String, email: String, password: String): AuthResult {
+        if (name.isBlank()) return AuthResult.Error("Name cannot be empty")
+        if (email.isBlank() || !email.contains("@")) return AuthResult.Error("Invalid email")
+        if (password.length < 4) return AuthResult.Error("Password must be at least 4 characters")
 
-                if (cleanEmail.isBlank() || !cleanEmail.contains("@")) {
-                    return@withContext AuthResult.Error("Please enter a valid email address.")
-                }
-                if (cleanPass.length < 6) {
-                    return@withContext AuthResult.Error("Password must be at least 6 characters.")
-                }
-
-                val existingUser = userDao.getUserProfile()
-                val passwordHash = hashPassword(cleanPass)
-
-                if (existingUser != null && existingUser.email.equals(cleanEmail, ignoreCase = true)) {
-                    // Check password if set, otherwise accept if existing record had empty hash
-                    if (existingUser.passwordHash.isNotEmpty() && existingUser.passwordHash != passwordHash) {
-                        return@withContext AuthResult.Error("Invalid email or password.")
-                    }
-
-                    val updatedUser = existingUser.copy(
-                        isLoggedIn = true
-                    )
-                    userDao.insertOrUpdateUser(updatedUser)
-
-                    val uid = if (updatedUser.firebaseUid.isNotBlank()) updatedUser.firebaseUid else UUID.randomUUID().toString()
-                    userPreferences.setLoggedIn(true)
-                    userPreferences.setLoggedInEmail(cleanEmail)
-                    userPreferences.setUserId(uid)
-                    userPreferences.setDisplayName(updatedUser.name)
-                    userPreferences.setOnboardingCompleted(updatedUser.isOnboarded)
-
-                    return@withContext AuthResult.Success(
-                        AuthUser(
-                            uid = uid,
-                            email = cleanEmail,
-                            displayName = updatedUser.name
-                        )
-                    )
-                } else {
-                    // First time login or new user login without prior registration
-                    val uid = UUID.randomUUID().toString()
-                    val newUser = (existingUser ?: UserEntity()).copy(
-                        id = 1,
-                        name = cleanEmail.substringBefore("@").replaceFirstChar { it.uppercase() },
-                        email = cleanEmail,
-                        passwordHash = passwordHash,
-                        isLoggedIn = true,
-                        isOnboarded = false,
-                        firebaseUid = uid
-                    )
-                    userDao.insertOrUpdateUser(newUser)
-
-                    userPreferences.setLoggedIn(true)
-                    userPreferences.setLoggedInEmail(cleanEmail)
-                    userPreferences.setUserId(uid)
-                    userPreferences.setDisplayName(newUser.name)
-                    userPreferences.setOnboardingCompleted(false)
-
-                    return@withContext AuthResult.Success(
-                        AuthUser(
-                            uid = uid,
-                            email = cleanEmail,
-                            displayName = newUser.name
-                        )
-                    )
-                }
-            } catch (e: Exception) {
-                return@withContext AuthResult.Error(e.localizedMessage ?: "An unexpected error occurred during login.")
-            }
+        val existing = userDao.getUserProfile()
+        if (existing != null && existing.email == email && existing.passwordHash.isNotEmpty()) {
+            return AuthResult.Error("Account already exists. Please login.")
         }
 
-    override suspend fun register(
-        email: String,
-        password: String,
-        displayName: String
-    ): AuthResult<AuthUser> = withContext(Dispatchers.IO) {
-        try {
-            val cleanEmail = email.trim().lowercase()
-            val cleanPass = password.trim()
-            val cleanName = displayName.trim().ifBlank { "Fitness User" }
+        val hashed = hashPassword(password)
+        val user = UserEntity(
+            id = 1,
+            name = name.trim(),
+            email = email.trim(),
+            passwordHash = hashed,
+            isLoggedIn = true,
+            isOnboarded = false
+        )
+        userDao.insertOrUpdateUser(user)
+        userPreferences.setLoggedIn(true)
+        userPreferences.setUserEmail(email.trim())
+        return AuthResult.Success(user)
+    }
 
-            if (cleanEmail.isBlank() || !cleanEmail.contains("@")) {
-                return@withContext AuthResult.Error("Please enter a valid email address.")
-            }
-            if (cleanPass.length < 6) {
-                return@withContext AuthResult.Error("Password must be at least 6 characters.")
-            }
+    // --- Login ---
+    suspend fun login(email: String, password: String): AuthResult {
+        if (email.isBlank()) return AuthResult.Error("Email cannot be empty")
+        if (password.isBlank()) return AuthResult.Error("Password cannot be empty")
 
-            val uid = UUID.randomUUID().toString()
-            val passwordHash = hashPassword(cleanPass)
+        val user = userDao.getUserProfile()
+            ?: return AuthResult.Error("No account found. Please register first.")
 
-            val existingProfile = userDao.getUserProfile()
-            val newUser = (existingProfile ?: UserEntity()).copy(
-                id = 1,
-                name = cleanName,
-                email = cleanEmail,
-                passwordHash = passwordHash,
-                isLoggedIn = true,
-                isOnboarded = false,
-                firebaseUid = uid
-            )
-            userDao.insertOrUpdateUser(newUser)
-
-            userPreferences.setLoggedIn(true)
-            userPreferences.setLoggedInEmail(cleanEmail)
-            userPreferences.setUserId(uid)
-            userPreferences.setDisplayName(cleanName)
-            userPreferences.setOnboardingCompleted(false)
-
-            return@withContext AuthResult.Success(
-                AuthUser(
-                    uid = uid,
-                    email = cleanEmail,
-                    displayName = cleanName
-                )
-            )
-        } catch (e: Exception) {
-            return@withContext AuthResult.Error(e.localizedMessage ?: "Failed to create account.")
+        if (user.email != email.trim()) {
+            return AuthResult.Error("Email does not match registered account.")
         }
-    }
 
-    override suspend fun resetPassword(email: String): AuthResult<Unit> = withContext(Dispatchers.IO) {
-        val cleanEmail = email.trim().lowercase()
-        if (cleanEmail.isBlank() || !cleanEmail.contains("@")) {
-            return@withContext AuthResult.Error("Please enter a valid email address.")
+        val hashed = hashPassword(password)
+        if (user.passwordHash != hashed) {
+            return AuthResult.Error("Incorrect password.")
         }
-        // In local mode, simulate successful password reset email dispatched
-        return@withContext AuthResult.Success(Unit)
+
+        userDao.setLoggedIn(true)
+        userPreferences.setLoggedIn(true)
+        return AuthResult.Success(user)
     }
 
-    override suspend fun logout() = withContext(Dispatchers.IO) {
-        try {
-            userDao.setLoggedIn(false)
-        } catch (_: Exception) {}
-        userPreferences.clearSession()
+    // --- Logout ---
+    suspend fun logout() {
+        userDao.setLoggedIn(false)
+        userPreferences.setLoggedIn(false)
     }
 
-    override fun isUserLoggedIn(): Boolean {
-        return userPreferences.isLoggedIn()
-    }
+    // --- Session Check ---
+    fun isLoggedIn(): Boolean = userPreferences.isLoggedIn()
+    fun isOnboarded(): Boolean = userPreferences.isOnboarded()
 
-    override fun isOnboardingCompleted(): Boolean {
-        return userPreferences.isOnboardingCompleted()
-    }
+    suspend fun getUserProfile(): UserEntity? = userDao.getUserProfile()
+}
 
-    override fun getCurrentUser(): AuthUser? {
-        val uid = userPreferences.getUserId() ?: return null
-        val email = userPreferences.getLoggedInEmail() ?: ""
-        val name = userPreferences.getDisplayName()
-        return AuthUser(uid = uid, email = email, displayName = name)
-    }
-
-    override fun getCurrentUserId(): String? {
-        return userPreferences.getUserId()
-    }
+sealed class AuthResult {
+    data class Success(val user: UserEntity) : AuthResult()
+    data class Error(val message: String) : AuthResult()
 }

@@ -1,4 +1,4 @@
-package com.kcalfit.app.ui.viewmodel
+package com.kcalfit.app.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider

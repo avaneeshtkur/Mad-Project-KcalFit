@@ -42,7 +42,7 @@ import com.kcalfit.app.data.model.WorkoutRoutineEntity
         FriendEntity::class,
         ActivityPostEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

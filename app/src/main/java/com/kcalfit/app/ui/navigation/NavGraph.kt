@@ -1,55 +1,55 @@
 package com.kcalfit.app.ui.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.kcalfit.app.data.preferences.UserPreferences
-import com.kcalfit.app.data.repository.AuthRepository
-import com.kcalfit.app.ui.auth.AuthViewModel
+import com.kcalfit.app.ui.auth.EmailVerificationScreen
 import com.kcalfit.app.ui.auth.ForgotPasswordScreen
 import com.kcalfit.app.ui.auth.LoginScreen
 import com.kcalfit.app.ui.auth.RegisterScreen
 import com.kcalfit.app.ui.auth.WelcomeScreen
+import com.kcalfit.app.ui.exercise.ExerciseScreen
 import com.kcalfit.app.ui.onboarding.OnboardingScreen
-import com.kcalfit.app.ui.onboarding.OnboardingViewModel
 import com.kcalfit.app.ui.screens.AddFoodScreen
 import com.kcalfit.app.ui.screens.HistoryScreen
 import com.kcalfit.app.ui.screens.HomeScreen
 import com.kcalfit.app.ui.screens.NutritionScreen
+import com.kcalfit.app.ui.splash.SplashScreen
 import com.kcalfit.app.ui.viewmodel.CalFitViewModel
+import com.kcalfit.app.ui.water.WaterScreen
 
 @Composable
 fun NavGraph(
     navController: NavHostController,
     viewModel: CalFitViewModel,
-    authViewModel: AuthViewModel,
-    onboardingViewModel: OnboardingViewModel,
     userPreferences: UserPreferences,
+    authViewModel: Any? = null,
+    onboardingViewModel: Any? = null,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val authUiState by authViewModel.uiState.collectAsState()
-    val onboardingUiState by onboardingViewModel.uiState.collectAsState()
+    val generatedCode by viewModel.generatedVerificationCode.collectAsState()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Determine start destination based on session state
-    val startDestination = when {
-        userPreferences.isLoggedIn() && userPreferences.isOnboarded() -> Screen.Home.route
-        userPreferences.isLoggedIn() && !userPreferences.isOnboarded() -> Screen.Onboarding.route
-        else -> Screen.Welcome.route
-    }
-
-    // Show bottom bar only on main app screens
-    val showBottomBar = currentRoute != null && currentRoute !in Screen.authRoutes
+    val bottomNavRoutes = Screen.bottomNavItems.map { it.route }
+    val showBottomBar = currentRoute in bottomNavRoutes
 
     Scaffold(
         bottomBar = {
@@ -62,9 +62,21 @@ fun NavGraph(
 
         NavHost(
             navController = navController,
-            startDestination = startDestination,
+            startDestination = Screen.Splash.route,
             modifier = Modifier.padding(paddingValues)
         ) {
+            // --- Splash ---
+            composable(Screen.Splash.route) {
+                SplashScreen(
+                    userProfile = uiState.userProfile,
+                    onNavigateNext = { targetRoute ->
+                        navController.navigate(targetRoute) {
+                            popUpTo(Screen.Splash.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
             // --- Auth Screens ---
             composable(Screen.Welcome.route) {
                 WelcomeScreen(
@@ -78,24 +90,19 @@ fun NavGraph(
             }
 
             composable(Screen.Login.route) {
-                // Navigate on successful login
-                LaunchedEffect(authUiState.loggedInUser) {
-                    authUiState.loggedInUser?.let { user ->
-                        if (user.isOnboarded) {
-                            navController.navigate(Screen.Home.route) {
-                                popUpTo(Screen.Welcome.route) { inclusive = true }
-                            }
-                        } else {
-                            navController.navigate(Screen.Onboarding.route) {
-                                popUpTo(Screen.Welcome.route) { inclusive = true }
-                            }
-                        }
-                    }
-                }
-
+                var loginError by remember { mutableStateOf<String?>(null) }
                 LoginScreen(
                     onLoginSuccess = { email, password ->
-                        authViewModel.login(email, password)
+                        viewModel.loginUser(email, password) { success ->
+                            if (success) {
+                                val target = if (uiState.userProfile?.isOnboarded == true) Screen.Home.route else Screen.Onboarding.route
+                                navController.navigate(target) {
+                                    popUpTo(Screen.Welcome.route) { inclusive = true }
+                                }
+                            } else {
+                                loginError = "Invalid email or password"
+                            }
+                        }
                     },
                     onNavigateToRegister = {
                         navController.navigate(Screen.Register.route) {
@@ -105,32 +112,45 @@ fun NavGraph(
                     onNavigateToForgotPassword = {
                         navController.navigate(Screen.ForgotPassword.route)
                     },
-                    errorMessage = authUiState.errorMessage,
-                    isLoading = authUiState.isLoading
+                    errorMessage = loginError
                 )
             }
 
             composable(Screen.Register.route) {
-                // Navigate on successful registration
-                LaunchedEffect(authUiState.registeredUser) {
-                    authUiState.registeredUser?.let {
-                        navController.navigate(Screen.Onboarding.route) {
-                            popUpTo(Screen.Welcome.route) { inclusive = true }
-                        }
-                    }
-                }
-
                 RegisterScreen(
                     onRegisterSuccess = { name, email, password ->
-                        authViewModel.register(name, email, password)
+                        viewModel.registerUser(name, email, password)
+                        navController.navigate(Screen.EmailVerification.route)
                     },
                     onNavigateToLogin = {
                         navController.navigate(Screen.Login.route) {
                             popUpTo(Screen.Register.route) { inclusive = true }
                         }
+                    }
+                )
+            }
+
+            composable(Screen.EmailVerification.route) {
+                EmailVerificationScreen(
+                    email = uiState.userProfile?.email ?: "your email",
+                    generatedCode = generatedCode,
+                    onVerifyCode = { code ->
+                        viewModel.verifyEmailCode(code)
                     },
-                    errorMessage = authUiState.errorMessage,
-                    isLoading = authUiState.isLoading
+                    onSuccess = {
+                        viewModel.markEmailVerified()
+                        navController.navigate(Screen.Onboarding.route) {
+                            popUpTo(Screen.Welcome.route) { inclusive = true }
+                        }
+                    },
+                    onResendCode = {
+                        viewModel.resendVerificationCode()
+                    },
+                    onNavigateToLogin = {
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(Screen.Welcome.route) { inclusive = true }
+                        }
+                    }
                 )
             }
 
@@ -144,24 +164,20 @@ fun NavGraph(
 
             // --- Onboarding ---
             composable(Screen.Onboarding.route) {
-                LaunchedEffect(onboardingUiState.isCompleted) {
-                    if (onboardingUiState.isCompleted) {
+                OnboardingScreen(
+                    initialName = uiState.userProfile?.name ?: "Fitness User",
+                    onOnboardingCompleted = { name, age, sex, heightCm, weightKg, targetWeightKg, activityLevel, goal ->
+                        viewModel.completeOnboarding(
+                            name, age, sex, heightCm, weightKg, targetWeightKg, activityLevel, goal
+                        )
                         navController.navigate(Screen.Home.route) {
                             popUpTo(0) { inclusive = true }
                         }
                     }
-                }
-
-                OnboardingScreen(
-                    onOnboardingCompleted = { name, age, sex, heightCm, weightKg, targetWeightKg, activityLevel, goal ->
-                        onboardingViewModel.completeOnboarding(
-                            name, age, sex, heightCm, weightKg, targetWeightKg, activityLevel, goal
-                        )
-                    }
                 )
             }
 
-            // --- Main App Screens ---
+            // --- Main App Tabs ---
             composable(Screen.Home.route) {
                 HomeScreen(
                     uiState = uiState,
@@ -181,6 +197,42 @@ fun NavGraph(
                 )
             }
 
+            composable(Screen.Exercise.route) {
+                ExerciseScreen(
+                    uiState = uiState,
+                    onLogExerciseSubmit = { name, category, duration, calories ->
+                        viewModel.logExercise(name, category, duration, calories)
+                    },
+                    onDeleteExercise = { entry ->
+                        viewModel.deleteExerciseEntry(entry)
+                    },
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(Screen.Water.route) {
+                WaterScreen(
+                    uiState = uiState,
+                    onAddWater = { amount ->
+                        viewModel.addWaterIntake(amount)
+                    },
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(Screen.Chatbot.route) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Coach / Chatbot Screen", style = MaterialTheme.typography.titleLarge)
+                }
+            }
+
+            composable(Screen.Profile.route) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Profile Screen", style = MaterialTheme.typography.titleLarge)
+                }
+            }
+
+            // --- Secondary Screens ---
             composable(Screen.AddFood.route) {
                 AddFoodScreen(
                     onAddFoodSubmit = { foodName, mealType, calories, quantity, date ->
@@ -227,6 +279,24 @@ fun NavGraph(
                         viewModel.seedSampleData()
                     }
                 )
+            }
+
+            composable(Screen.Weight.route) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Weight Log Screen", style = MaterialTheme.typography.titleLarge)
+                }
+            }
+
+            composable(Screen.CalorieSuggestion.route) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Calorie Goal Suggestion Screen", style = MaterialTheme.typography.titleLarge)
+                }
+            }
+
+            composable(Screen.WorkoutPlan.route) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Workout Plan Screen", style = MaterialTheme.typography.titleLarge)
+                }
             }
         }
     }

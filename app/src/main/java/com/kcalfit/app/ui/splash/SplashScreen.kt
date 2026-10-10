@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.kcalfit.app.data.model.UserEntity
+import com.kcalfit.app.ui.navigation.Screen
 import kotlinx.coroutines.delay
 
 @Composable
@@ -46,12 +47,12 @@ fun SplashScreen(
             targetValue = 1.0f,
             animationSpec = tween(durationMillis = 500)
         )
-        delay(1200)
+        delay(2000L)
 
         val targetRoute = when {
-            userProfile == null || !userProfile.isLoggedIn -> "welcome"
-            !userProfile.isOnboarded -> "onboarding"
-            else -> "today"
+            userProfile == null || !userProfile.isLoggedIn -> Screen.Welcome.route
+            !userProfile.isOnboarded -> Screen.Onboarding.route
+            else -> Screen.Home.route
         }
         onNavigateNext(targetRoute)
     }
@@ -89,7 +90,7 @@ fun SplashScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "CAL FIT",
+                text = "KCal Fit",
                 style = MaterialTheme.typography.displayLarge,
                 fontWeight = FontWeight.ExtraBold,
                 color = MaterialTheme.colorScheme.onPrimary
@@ -98,7 +99,7 @@ fun SplashScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Your Fitness & Nutrition Companion",
+                text = "Your Personal Fitness Tracker",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
             )

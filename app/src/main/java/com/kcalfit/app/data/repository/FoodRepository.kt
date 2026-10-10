@@ -43,6 +43,9 @@ class FoodRepository(
     suspend fun saveUserProfile(user: UserEntity) = userDao.insertOrUpdateUser(user)
     suspend fun setLoggedIn(isLoggedIn: Boolean) = userDao.setLoggedIn(isLoggedIn)
     suspend fun setOnboarded(isOnboarded: Boolean) = userDao.setOnboarded(isOnboarded)
+    suspend fun setEmailVerified(isVerified: Boolean) = userDao.setEmailVerified(isVerified)
+    suspend fun setVerificationCode(code: String) = userDao.setVerificationCode(code, System.currentTimeMillis())
+    suspend fun getVerificationCode(): String? = userDao.getVerificationCode()
 
     // --- Food Entries ---
     fun getEntriesForDate(date: String): Flow<List<FoodEntry>> = foodEntryDao.getEntriesForDate(date)

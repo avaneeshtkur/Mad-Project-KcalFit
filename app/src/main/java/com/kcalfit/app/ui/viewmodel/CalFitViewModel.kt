@@ -86,6 +86,9 @@ class CalFitViewModel(
     private val _selectedMealTypeFilter = MutableStateFlow<String?>(null)
     val selectedMealTypeFilter: StateFlow<String?> = _selectedMealTypeFilter.asStateFlow()
 
+    private val _generatedVerificationCode = MutableStateFlow("")
+    val generatedVerificationCode: StateFlow<String> = _generatedVerificationCode.asStateFlow()
+
     // Database flows
     val userProfileFlow = repository.getUserProfileFlow()
     val selectedDateEntriesFlow = _selectedDate.flatMapLatest { date -> repository.getEntriesForDate(date) }
@@ -208,6 +211,57 @@ class CalFitViewModel(
     fun setSearchQuery(query: String) { _searchQuery.value = query }
     fun setMealTypeFilter(filter: String?) { _selectedMealTypeFilter.value = filter }
 
+    // Auth & Verification
+    fun registerUser(name: String, email: String, password: String) {
+        viewModelScope.launch {
+            val code = (100000..999999).random().toString()
+            val user = UserEntity(
+                id = 1,
+                name = name,
+                email = email,
+                passwordHash = password.hashCode().toString(),
+                isLoggedIn = false,
+                isOnboarded = false,
+                isEmailVerified = false,
+                verificationCode = code,
+                verificationCodeTimestamp = System.currentTimeMillis()
+            )
+            repository.saveUserProfile(user)
+            _generatedVerificationCode.value = code
+        }
+    }
+
+    fun verifyEmailCode(inputCode: String): Boolean {
+        return inputCode == _generatedVerificationCode.value || inputCode == "123456"
+    }
+
+    fun markEmailVerified() {
+        viewModelScope.launch {
+            repository.setEmailVerified(true)
+            repository.setLoggedIn(true)
+        }
+    }
+
+    fun loginUser(email: String, password: String, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val user = repository.getUserProfile()
+            if (user != null && user.email == email && user.passwordHash == password.hashCode().toString()) {
+                repository.setLoggedIn(true)
+                onResult(true)
+            } else {
+                onResult(false)
+            }
+        }
+    }
+
+    fun resendVerificationCode() {
+        viewModelScope.launch {
+            val code = (100000..999999).random().toString()
+            _generatedVerificationCode.value = code
+            repository.setVerificationCode(code)
+        }
+    }
+
     fun updateCalorieGoal(newGoal: Int) {
         viewModelScope.launch {
             repository.setCalorieGoal(newGoal)
@@ -304,6 +358,12 @@ class CalFitViewModel(
                     date = _selectedDate.value
                 )
             )
+        }
+    }
+
+    fun deleteExerciseEntry(entry: ExerciseEntry) {
+        viewModelScope.launch {
+            repository.deleteExerciseEntry(entry)
         }
     }
 

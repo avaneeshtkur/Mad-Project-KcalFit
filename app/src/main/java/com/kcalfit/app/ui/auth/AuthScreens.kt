@@ -378,7 +378,7 @@ fun RegisterScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("Continue to Onboarding", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Continue to Verification", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
                 }
             }

@@ -28,4 +28,13 @@ interface UserDao {
 
     @Query("UPDATE user_profile SET dailyCalorieGoal = :goal WHERE id = 1")
     suspend fun updateCalorieGoal(goal: Int)
+
+    @Query("UPDATE user_profile SET isEmailVerified = :isVerified WHERE id = 1")
+    suspend fun setEmailVerified(isVerified: Boolean)
+
+    @Query("UPDATE user_profile SET verificationCode = :code, verificationCodeTimestamp = :timestamp WHERE id = 1")
+    suspend fun setVerificationCode(code: String, timestamp: Long)
+
+    @Query("SELECT verificationCode FROM user_profile WHERE id = 1")
+    suspend fun getVerificationCode(): String?
 }

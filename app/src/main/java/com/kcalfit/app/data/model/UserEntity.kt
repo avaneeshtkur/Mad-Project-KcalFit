@@ -37,5 +37,8 @@ data class UserEntity(
     val workoutLocation: String = "GYM",
     val fitnessExperience: String = "BEGINNER",
     val workoutPlanTitle: String = "3-Day Full Body Foundation",
-    val workoutPlanDescription: String = "A balanced foundational routine for consistency and strength."
+    val workoutPlanDescription: String = "A balanced foundational routine for consistency and strength.",
+    val isEmailVerified: Boolean = false,
+    val verificationCode: String = "",
+    val verificationCodeTimestamp: Long = 0
 )

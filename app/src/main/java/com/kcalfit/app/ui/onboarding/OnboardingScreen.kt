@@ -43,7 +43,7 @@ fun OnboardingScreen(
     initialName: String = "Fitness User",
     onOnboardingCompleted: (
         name: String, age: Int, sex: String, heightCm: Double, weightKg: Double,
-        targetWeightKg: Double, activityLevel: String, goal: String
+        targetWeightKg: Double, activityLevel: String, goal: String, exerciseDaysPerWeek: Int
     ) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -58,6 +58,7 @@ fun OnboardingScreen(
 
     // Step 2 values
     var selectedActivity by remember { mutableStateOf(ActivityLevel.MODERATELY_ACTIVE) }
+    var exerciseDaysPerWeek by remember { mutableIntStateOf(3) }
 
     // Step 3 values
     var selectedGoal by remember { mutableStateOf(FitnessGoal.LOSE_WEIGHT) }
@@ -195,6 +196,12 @@ fun OnboardingScreen(
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
+                            Text("How many days a week do you exercise?", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                (1..7).forEach { days ->
+                                    FilterChip(selected = exerciseDaysPerWeek == days, onClick = { exerciseDaysPerWeek = days }, label = { Text(days.toString()) })
+                                }
+                            }
                         }
                     }
                 }
@@ -266,7 +273,7 @@ fun OnboardingScreen(
                             val targetWeight = targetWeightText.toDoubleOrNull() ?: 68.0
 
                             onOnboardingCompleted(
-                                name, age, sexStr, height, weight, targetWeight, selectedActivity.name, selectedGoal.name
+                                name, age, sexStr, height, weight, targetWeight, selectedActivity.name, selectedGoal.name, exerciseDaysPerWeek
                             )
                         }
                     },

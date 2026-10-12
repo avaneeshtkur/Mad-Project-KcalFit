@@ -19,6 +19,7 @@ data class UserEntity(
     val targetWeightKg: Double = 65.0,
     val activityLevel: String = "MODERATELY_ACTIVE",
     val fitnessGoal: String = "LOSE_WEIGHT", // LOSE_WEIGHT, MAINTAIN, GAIN_WEIGHT
+    val exerciseDaysPerWeek: Int = 3,
     val weeklyTargetKg: Double = 0.5,
     val units: String = "METRIC", // METRIC, IMPERIAL
     val dietaryPreference: String = "STANDARD", // STANDARD, HIGH_PROTEIN, KETO, VEGAN, VEGETARIAN, MEDITERRANEAN

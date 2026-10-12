@@ -21,6 +21,8 @@ import com.kcalfit.app.domain.calculator.FitnessGoal
 import com.kcalfit.app.domain.calculator.MacroCalculator
 import com.kcalfit.app.domain.calculator.NlpFoodParser
 import com.kcalfit.app.domain.calculator.Sex
+import com.kcalfit.app.domain.calculator.CalorieCalculationResult
+import com.kcalfit.app.domain.calculator.WorkoutPlanGenerator
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -76,6 +78,10 @@ fun getTodayDateString(): String {
 class CalFitViewModel(
     private val repository: FoodRepository
 ) : ViewModel() {
+    private val _onboardingResult = MutableStateFlow<CalorieCalculationResult?>(null)
+    val onboardingResult: StateFlow<CalorieCalculationResult?> = _onboardingResult.asStateFlow()
+    private val _workoutPlan = MutableStateFlow<List<com.kcalfit.app.domain.calculator.WorkoutDayPlan>>(emptyList())
+    val workoutPlan: StateFlow<List<com.kcalfit.app.domain.calculator.WorkoutDayPlan>> = _workoutPlan.asStateFlow()
 
     private val _selectedDate = MutableStateFlow(getTodayDateString())
     val selectedDate: StateFlow<String> = _selectedDate.asStateFlow()
@@ -274,7 +280,7 @@ class CalFitViewModel(
 
     fun completeOnboarding(
         name: String, age: Int, sexStr: String, heightCm: Double, weightKg: Double,
-        targetWeightKg: Double, activityLevelStr: String, goalStr: String
+        targetWeightKg: Double, activityLevelStr: String, goalStr: String, exerciseDaysPerWeek: Int
     ) {
         viewModelScope.launch {
             val sex = if (sexStr.contains("FEMALE", ignoreCase = true)) Sex.FEMALE else Sex.MALE
@@ -296,6 +302,7 @@ class CalFitViewModel(
                 targetWeightKg = targetWeightKg,
                 activityLevel = activity.name,
                 fitnessGoal = goal.name,
+                exerciseDaysPerWeek = exerciseDaysPerWeek,
                 dailyCalorieGoal = calc.dailyCalorieTarget,
                 targetProteinGrams = macros.proteinGrams,
                 targetCarbsGrams = macros.carbsGrams,
@@ -304,6 +311,17 @@ class CalFitViewModel(
 
             repository.saveUserProfile(updatedUser)
             repository.setCalorieGoal(calc.dailyCalorieTarget)
+            _onboardingResult.value = calc
+        }
+    }
+
+    fun generateWorkoutPlan() {
+        viewModelScope.launch {
+            repository.getUserProfile()?.let { user ->
+                val goal = FitnessGoal.entries.firstOrNull { it.name == user.fitnessGoal } ?: FitnessGoal.LOSE_WEIGHT
+                val activity = ActivityLevel.entries.firstOrNull { it.name == user.activityLevel } ?: ActivityLevel.MODERATELY_ACTIVE
+                _workoutPlan.value = WorkoutPlanGenerator.generatePlan(goal, user.exerciseDaysPerWeek, activity)
+            }
         }
     }
 
@@ -380,12 +398,7 @@ class CalFitViewModel(
             val remainingCals = uiState.value.remainingCalories
             val protein = uiState.value.totalProteinGrams.toInt()
 
-            val aiResponse = when {
-                userQuery.contains("track", ignoreCase = true) -> "You have consumed $currentCals of your $goalCals kcal target today ($remainingCals kcal remaining). Your protein intake is $protein g."
-                userQuery.contains("eat", ignoreCase = true) || userQuery.contains("suggest", ignoreCase = true) -> "With $remainingCals kcal remaining, a high-protein option like Grilled Chicken Salad, Paneer Tikka, or 2 Boiled Eggs with Chapati would fit great!"
-                userQuery.contains("protein", ignoreCase = true) -> "You've logged $protein g of protein today. To reach your ${uiState.value.targetProteinGrams}g target, consider Greek Yogurt, Eggs, or Lentils!"
-                else -> "Great progress on your daily log! Remember to stay hydrated and keep logging your meals to build your streak!"
-            }
+            val aiResponse = com.kcalfit.app.domain.chatbot.FitnessChatbot.getResponse(userQuery, currentCals, goalCals, remainingCals, protein, uiState.value.targetProteinGrams, uiState.value.totalCarbsGrams.toInt(), uiState.value.totalFatGrams.toInt(), uiState.value.totalWaterMl, uiState.value.caloriesBurned, uiState.value.userProfile?.name ?: "User").message
 
             repository.sendCoachMessage(aiResponse, "COACH")
         }

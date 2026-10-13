@@ -10,6 +10,12 @@
         android:name="android.hardware.camera"
         android:required="false" />
 
+    <queries>
+        <intent><action android:name="android.speech.RecognitionService" /></intent>
+        <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
+    </queries>
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
     <application
         android:name=".CalFitApplication"
         android:allowBackup="true"

@@ -27,4 +27,7 @@ interface FoodItemDao {
 
     @Query("SELECT COUNT(*) FROM master_foods")
     suspend fun getMasterFoodCount(): Int
+
+    @Query("SELECT COUNT(*) FROM master_foods WHERE brand = 'Imported dataset'")
+    suspend fun getImportedFoodCount(): Int
 }

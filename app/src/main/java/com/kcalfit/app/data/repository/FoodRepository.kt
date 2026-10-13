@@ -64,6 +64,7 @@ class FoodRepository(
 
     // --- Exercise ---
     fun getExerciseEntriesForDate(date: String): Flow<List<ExerciseEntry>> = exerciseDao.getExerciseEntriesForDate(date)
+    fun getAllExerciseEntries(): Flow<List<ExerciseEntry>> = exerciseDao.getAllExerciseEntries()
     fun getTotalCaloriesBurnedForDate(date: String): Flow<Int?> = exerciseDao.getTotalCaloriesBurnedForDate(date)
     suspend fun insertExerciseEntry(entry: ExerciseEntry): Long = exerciseDao.insertExerciseEntry(entry)
     suspend fun deleteExerciseEntry(entry: ExerciseEntry) = exerciseDao.deleteExerciseEntry(entry)
@@ -107,31 +108,31 @@ class FoodRepository(
     fun setCalorieGoal(goal: Int) = userPreferences.setCalorieGoal(goal)
 
     // --- Seed Initial Master Food & Demo Data ---
-    suspend fun seedSampleDataIfNeeded(force: Boolean = false) {
+    suspend fun seedSampleDataIfNeeded() {
         // The old preference can outlive a Room destructive migration. Room's actual
         // contents, not a preference flag, determine whether starter foods are needed.
         run {
             val masterFoods = listOf(
-                FoodItemEntity(name = "Roti / Chapati", brand = "Indian Homemade", category = "Grains", calories = 120, proteinGrams = 3.5, carbsGrams = 22.0, fatGrams = 1.2, barcode = "890100100001"),
-                FoodItemEntity(name = "Steamed Rice", brand = "Generic", category = "Grains", calories = 205, proteinGrams = 4.2, carbsGrams = 45.0, fatGrams = 0.4, barcode = "890100100002"),
-                FoodItemEntity(name = "Dal Tadka", brand = "Indian Home Style", category = "Lentils", calories = 180, proteinGrams = 9.0, carbsGrams = 24.0, fatGrams = 5.0, barcode = "890100100003"),
-                FoodItemEntity(name = "Paneer Tikka", brand = "Indian Tandoori", category = "Dairy", calories = 260, proteinGrams = 16.0, carbsGrams = 6.0, fatGrams = 18.0, barcode = "890100100004"),
-                FoodItemEntity(name = "Chicken Breast", brand = "Fresh Meat", category = "Meat", calories = 165, proteinGrams = 31.0, carbsGrams = 0.0, fatGrams = 3.6, barcode = "890100100005"),
-                FoodItemEntity(name = "Boiled Egg", brand = "Farm Fresh", category = "Eggs", calories = 78, proteinGrams = 6.3, carbsGrams = 0.6, fatGrams = 5.3, barcode = "890100100006"),
-                FoodItemEntity(name = "Oatmeal with Milk", brand = "Breakfast Bowl", category = "Grains", calories = 220, proteinGrams = 8.0, carbsGrams = 34.0, fatGrams = 4.5, barcode = "890100100007"),
-                FoodItemEntity(name = "Banana", brand = "Fresh Fruit", category = "Fruits", calories = 105, proteinGrams = 1.3, carbsGrams = 27.0, fatGrams = 0.3, barcode = "890100100008"),
-                FoodItemEntity(name = "Apple", brand = "Fresh Fruit", category = "Fruits", calories = 95, proteinGrams = 0.5, carbsGrams = 25.0, fatGrams = 0.3, barcode = "890100100009"),
-                FoodItemEntity(name = "Masala Dosa", brand = "South Indian", category = "Breakfast", calories = 250, proteinGrams = 5.0, carbsGrams = 38.0, fatGrams = 10.0, barcode = "890100100010"),
-                FoodItemEntity(name = "Steamed Idli", brand = "South Indian", category = "Breakfast", calories = 70, proteinGrams = 2.0, carbsGrams = 15.0, fatGrams = 0.2, barcode = "890100100011"),
-                FoodItemEntity(name = "Greek Yogurt", brand = "Amul / Nestle", category = "Dairy", calories = 120, proteinGrams = 10.0, carbsGrams = 8.0, fatGrams = 3.0, barcode = "890100100012"),
-                FoodItemEntity(name = "Whole Almonds", brand = "Nutraj", category = "Snacks", calories = 160, proteinGrams = 6.0, carbsGrams = 6.0, fatGrams = 14.0, barcode = "890100100013")
+                FoodItemEntity(name = "Roti / Chapati", brand = "Indian Homemade", category = "Grains", calories = 120, proteinGrams = 3.5, carbsGrams = 22.0, fatGrams = 1.2),
+                FoodItemEntity(name = "Steamed Rice", brand = "Generic", category = "Grains", calories = 205, proteinGrams = 4.2, carbsGrams = 45.0, fatGrams = 0.4),
+                FoodItemEntity(name = "Dal Tadka", brand = "Indian Home Style", category = "Lentils", calories = 180, proteinGrams = 9.0, carbsGrams = 24.0, fatGrams = 5.0),
+                FoodItemEntity(name = "Paneer Tikka", brand = "Indian Tandoori", category = "Dairy", calories = 260, proteinGrams = 16.0, carbsGrams = 6.0, fatGrams = 18.0),
+                FoodItemEntity(name = "Chicken Breast", brand = "Fresh Meat", category = "Meat", calories = 165, proteinGrams = 31.0, carbsGrams = 0.0, fatGrams = 3.6),
+                FoodItemEntity(name = "Boiled Egg", brand = "Farm Fresh", category = "Eggs", calories = 78, proteinGrams = 6.3, carbsGrams = 0.6, fatGrams = 5.3),
+                FoodItemEntity(name = "Oatmeal with Milk", brand = "Breakfast Bowl", category = "Grains", calories = 220, proteinGrams = 8.0, carbsGrams = 34.0, fatGrams = 4.5),
+                FoodItemEntity(name = "Banana", brand = "Fresh Fruit", category = "Fruits", calories = 105, proteinGrams = 1.3, carbsGrams = 27.0, fatGrams = 0.3),
+                FoodItemEntity(name = "Apple", brand = "Fresh Fruit", category = "Fruits", calories = 95, proteinGrams = 0.5, carbsGrams = 25.0, fatGrams = 0.3),
+                FoodItemEntity(name = "Masala Dosa", brand = "South Indian", category = "Breakfast", calories = 250, proteinGrams = 5.0, carbsGrams = 38.0, fatGrams = 10.0),
+                FoodItemEntity(name = "Steamed Idli", brand = "South Indian", category = "Breakfast", calories = 70, proteinGrams = 2.0, carbsGrams = 15.0, fatGrams = 0.2),
+                FoodItemEntity(name = "Greek Yogurt", brand = "Amul / Nestle", category = "Dairy", calories = 120, proteinGrams = 10.0, carbsGrams = 8.0, fatGrams = 3.0),
+                FoodItemEntity(name = "Whole Almonds", brand = "Nutraj", category = "Snacks", calories = 160, proteinGrams = 6.0, carbsGrams = 6.0, fatGrams = 14.0)
             )
-            val missing = if (force) masterFoods else masterFoods.filter { foodItemDao.findByBarcode(it.barcode.orEmpty()) == null }
+            val missing = masterFoods.filter { foodItemDao.findByNameAndBrand(it.name, it.brand) == null }
             if (missing.isNotEmpty()) foodItemDao.insertFoodItems(missing)
         }
 
         // Seed Master Exercises dataset
-        if (exerciseDao.getMasterExerciseCount() == 0 || force) {
+        if (exerciseDao.getMasterExerciseCount() == 0) {
             val masterExercises = listOf(
                 ExerciseEntity(name = "Brisk Walking", category = "CARDIO", caloriesBurnedPerMinute = 5.0),
                 ExerciseEntity(name = "Running / Jogging", category = "CARDIO", caloriesBurnedPerMinute = 11.5),

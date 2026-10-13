@@ -20,7 +20,7 @@ fun BarcodeLookupScreen(onLookup: (String, (FoodItemEntity?) -> Unit) -> Unit,
     var result by remember { mutableStateOf<FoodItemEntity?>(null) }
     var searched by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
-    NakaPage("Barcode Scan",onBack) {
+    NakaPage("Barcode Lookup",onBack) {
         Spacer(Modifier.height(20.dp))
         Icon(Icons.Default.QrCodeScanner,null,Modifier.size(110.dp),tint=Naka.Violet)
         Text("Enter the barcode printed on your food package",style=MaterialTheme.typography.headlineSmall)
@@ -38,7 +38,7 @@ fun BarcodeLookupScreen(onLookup: (String, (FoodItemEntity?) -> Unit) -> Unit,
             else {
                 Text(result!!.name,style=MaterialTheme.typography.titleLarge)
                 Text("${result!!.calories} kcal per serving",color=Naka.Muted)
-                NakaButton("Log to Diary",{ onLogFood(result!!) })
+                NakaButton("Choose Quantity",{ onLogFood(result!!) })
             }
         }
         NakaButton("Add Food Manually",onManualAdd,outlined=true)

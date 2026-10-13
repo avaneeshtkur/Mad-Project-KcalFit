@@ -1,6 +1,13 @@
 package com.kcalfit.app.ui.auth
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import com.kcalfit.app.ui.theme.DarkBackground
+import com.kcalfit.app.ui.theme.DarkSurface
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,7 +25,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
@@ -48,6 +54,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.kcalfit.app.ui.components.CalFitLogo
 
 @Composable
 fun WelcomeScreen(
@@ -58,7 +65,7 @@ fun WelcomeScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(Brush.verticalGradient(listOf(DarkBackground, DarkSurface)))
             .padding(24.dp)
     ) {
         Column(
@@ -75,31 +82,30 @@ fun WelcomeScreen(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.FitnessCenter,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(50.dp)
-                )
+                CalFitLogo(size = 50.dp, showText = false)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "Welcome to Cal Fit",
+                text = "Build a healthier rhythm.",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.ExtraBold,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                color = Color.White
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Track your food, calories, macros, workouts & wellness in one seamless place.",
+                text = "Your meals, movement and progress—together in one place.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = Color.White.copy(alpha = 0.82f),
                 textAlign = TextAlign.Center
             )
+
+            Spacer(modifier = Modifier.height(32.dp))
+            Text("NUTRITION  /  ACTIVITY  /  PROGRESS", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelMedium)
 
             Spacer(modifier = Modifier.height(48.dp))
 
@@ -109,9 +115,7 @@ fun WelcomeScreen(
                     .fillMaxWidth()
                     .height(52.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.primary)
             ) {
                 Text(
                     text = "Get Started / Create Account",
@@ -127,7 +131,9 @@ fun WelcomeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.7f)),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
             ) {
                 Text(
                     text = "I Already Have an Account",
@@ -159,24 +165,32 @@ fun LoginScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .imePadding()
+            .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Top
     ) {
+        Spacer(modifier = Modifier.height(24.dp))
+        CalFitLogo(size = 44.dp, showText = false)
+        Spacer(modifier = Modifier.height(20.dp))
         Text(
-            text = "Login to Cal Fit",
+            text = "Welcome back",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
+
+        Text("Sign in to pick up where you left off.", color = MaterialTheme.colorScheme.onSurfaceVariant)
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),
@@ -285,24 +299,32 @@ fun RegisterScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .imePadding()
+            .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Top
     ) {
+        Spacer(modifier = Modifier.height(24.dp))
+        CalFitLogo(size = 44.dp, showText = false)
+        Spacer(modifier = Modifier.height(20.dp))
         Text(
-            text = "Create Cal Fit Account",
+            text = "Start your CalFit journey",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
+
+        Text("Create your account. Then we'll tailor your daily goals.", color = MaterialTheme.colorScheme.onSurfaceVariant)
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),
@@ -359,7 +381,7 @@ fun RegisterScreen(
                         when {
                             name.isBlank() -> localError = "Please enter your name"
                             email.isBlank() || !email.contains("@") -> localError = "Please enter a valid email"
-                            password.length < 4 -> localError = "Password must be at least 4 characters"
+                            password.length < 8 -> localError = "Password must be at least 8 characters"
                             password != confirmPassword -> localError = "Passwords do not match"
                             else -> onRegisterSuccess(name.trim(), email.trim(), password)
                         }
@@ -397,15 +419,19 @@ fun RegisterScreen(
 
 @Composable
 fun ForgotPasswordScreen(
+    onRequestReset: (String, (String?) -> Unit) -> Unit,
     onNavigateBackToLogin: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var email by remember { mutableStateOf("") }
     var sentMessage by remember { mutableStateOf<String?>(null) }
+    var resetLoading by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
             .fillMaxSize()
+            .imePadding()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -440,10 +466,16 @@ fun ForgotPasswordScreen(
 
         Button(
             onClick = {
-                if (email.contains("@")) {
-                    sentMessage = "Password reset email sent to $email!"
+                if (!email.contains("@")) sentMessage = "Enter a valid email address"
+                else {
+                    resetLoading = true
+                    onRequestReset(email.trim()) { error ->
+                        resetLoading = false
+                        sentMessage = error ?: "If this account exists, a reset email is on its way."
+                    }
                 }
             },
+            enabled = !resetLoading,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),

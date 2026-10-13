@@ -5,8 +5,18 @@ import android.content.SharedPreferences
 
 class UserPreferences(context: Context) {
 
+    private val secureSession = SecureSessionStore(context)
+
     private val prefs: SharedPreferences =
         context.getSharedPreferences("cal_fit_preferences", Context.MODE_PRIVATE)
+
+    init {
+        val legacy = prefs.getString("key_refresh_token", "").orEmpty()
+        if (legacy.isNotBlank()) {
+            secureSession.save(legacy)
+            prefs.edit().remove("key_refresh_token").commit()
+        }
+    }
 
     companion object {
         private const val KEY_CALORIE_GOAL = "key_calorie_goal"
@@ -65,12 +75,13 @@ class UserPreferences(context: Context) {
     }
     fun isDarkMode(): Boolean = prefs.getBoolean(KEY_DARK_MODE, false)
     fun setDarkMode(enabled: Boolean) { prefs.edit().putBoolean(KEY_DARK_MODE, enabled).apply() }
-    fun getRefreshToken(): String = prefs.getString(KEY_REFRESH_TOKEN, "").orEmpty()
+    fun getRefreshToken(): String = secureSession.read()
     fun getAuthUserId(): String = prefs.getString(KEY_AUTH_USER_ID, "").orEmpty()
     fun saveAuthSession(userId: String, refreshToken: String) {
-        prefs.edit().putString(KEY_AUTH_USER_ID, userId).putString(KEY_REFRESH_TOKEN, refreshToken).apply()
+        secureSession.save(refreshToken)
+        prefs.edit().putString(KEY_AUTH_USER_ID, userId).remove(KEY_REFRESH_TOKEN).apply()
     }
-    fun clearAuthSession() { prefs.edit().remove(KEY_AUTH_USER_ID).remove(KEY_REFRESH_TOKEN).apply() }
+    fun clearAuthSession() { secureSession.clear(); prefs.edit().remove(KEY_AUTH_USER_ID).remove(KEY_REFRESH_TOKEN).apply() }
 
     // --- Clear Session (for logout) ---
     fun clearSession() {

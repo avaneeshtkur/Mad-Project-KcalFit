@@ -14,7 +14,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.WaterDrop
@@ -37,7 +37,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object AddFood : Screen("add_food", "Add Food", Icons.Default.AddCircleOutline)
     object Exercise : Screen("exercise", "Exercise", Icons.Default.FitnessCenter)
     object Water : Screen("water", "Water", Icons.Default.WaterDrop)
-    object Chatbot : Screen("chatbot", "Coach", Icons.Default.SmartToy)
+    object Chatbot : Screen("chatbot", "Coach", Icons.Default.ChatBubble)
     
     // Secondary Screens
     object Nutrition : Screen("nutrition", "Nutrition", Icons.Default.PieChart)
@@ -47,8 +47,14 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object WorkoutPlan : Screen("workout_plan", "Workout Plan", Icons.Default.EventNote)
     object Weight : Screen("weight", "Weight", Icons.Default.MonitorWeight)
     object CalorieSuggestion : Screen("calorie_suggestion", "Your Goal", Icons.Default.TrackChanges)
+    object AddGoals : Screen("add_goals", "Add Goals", Icons.Default.TrackChanges)
+    object BarcodeLookup : Screen("barcode_lookup", "Barcode Lookup", Icons.Default.Search)
+    object MealDetail : Screen("meal_detail/{id}", "Meal Detail", Icons.Default.PieChart)
     
+    object Track : Screen("track", "Track", Icons.Default.TrackChanges)
+    object Insight : Screen("insight", "Insight", Icons.Default.History)
+
     companion object {
-        val bottomNavItems = listOf(Home, Exercise, Water, Chatbot, Profile)
+        val bottomNavItems = listOf(Home, Track, Nutrition, Insight, Profile)
     }
 }

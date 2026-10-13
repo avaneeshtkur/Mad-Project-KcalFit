@@ -1,267 +1,160 @@
 package com.kcalfit.app.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.PieChart
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.kcalfit.app.R
+import com.kcalfit.app.ui.nakafit.NakaPhoto
 import com.kcalfit.app.data.model.FoodEntry
 import com.kcalfit.app.data.model.MealType
-import com.kcalfit.app.ui.components.FoodEntryItem
-import com.kcalfit.app.ui.components.getMealTypeDetails
 import com.kcalfit.app.ui.viewmodel.CalFitUiState
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
 import java.util.Locale
+import java.time.LocalDate
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val Ink = Color(0xFF101014)
+private val Violet = Color(0xFF6500F5)
+private val Muted = Color(0xFF818AA0)
+private val Pale = Color(0xFFF8F8F9)
+
 @Composable
 fun NutritionScreen(
     uiState: CalFitUiState,
     onDateSelected: (String) -> Unit,
     onDeleteEntry: (FoodEntry) -> Unit,
+    onAddFood: () -> Unit = {},
+    onScanBarcode: () -> Unit = {},
+    onMealScan: () -> Unit = {},
+    onBack: () -> Unit = {},
+    onMealClick: (FoodEntry) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    var dayOpen by remember { mutableStateOf(false) }
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
+    val displayFormat = remember { SimpleDateFormat("EEE, d MMM yyyy", Locale.getDefault()) }
+    val breakfastDates = uiState.allEntries.filter { MealType.fromString(it.mealType) == MealType.BREAKFAST }
+        .map { it.date }.distinct().sortedDescending()
 
-    fun shiftDate(days: Int) {
-        try {
-            val calendar = Calendar.getInstance()
-            val parsed = dateFormat.parse(uiState.selectedDate)
-            if (parsed != null) {
-                calendar.time = parsed
-                calendar.add(Calendar.DAY_OF_YEAR, days)
-                onDateSelected(dateFormat.format(calendar.time))
+    LazyColumn(modifier.fillMaxSize().background(Color.White),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 100.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        item {
+            Row(Modifier.fillMaxWidth().height(55.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (dayOpen) IconButton(onClick = { dayOpen = false }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                else IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                Text(if (dayOpen) runCatching { displayFormat.format(dateFormat.parse(uiState.selectedDate)!!) }.getOrDefault(uiState.selectedDate)
+                    else "Breakfast", Modifier.weight(1f), color = Ink, fontSize = 19.sp)
+                IconButton(onClick = onAddFood) { Icon(Icons.Default.Search, "Search food") }
             }
-        } catch (_: Exception) {}
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.PieChart,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Daily Nutrition Summary",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        },
-        modifier = modifier
-    ) { paddingValues ->
-
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-
-            // 1. Date Navigation Header Bar
+        }
+        if (!dayOpen) {
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = { shiftDate(-1) }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                                contentDescription = "Previous Day"
-                            )
+                Surface(Modifier.fillMaxWidth().height(180.dp).clickable { dayOpen = true },
+                    shape = RoundedCornerShape(24.dp), color = Color(0xFFF1FFD2)) {
+                    Box {
+                        NakaPhoto(R.drawable.nakafit_food, "Healthy meal", Modifier.fillMaxHeight().fillMaxWidth(.43f).align(Alignment.CenterEnd))
+                        Column(Modifier.padding(23.dp), verticalArrangement = Arrangement.Center) {
+                        Text("Track Your\nNutrition", color = Ink, fontSize = 23.sp, lineHeight = 27.sp)
+                        Text("Monitor calories, macros,\nand vitamins.", color = Ink, fontSize = 12.sp)
+                        Spacer(Modifier.height(13.dp))
+                        Surface(color = Ink, shape = RoundedCornerShape(18.dp)) {
+                            Text("Start Now", Modifier.padding(horizontal = 16.dp, vertical = 7.dp), color = Color.White, fontSize = 12.sp)
                         }
-
+                        }
+                    }
+                }
+            }
+            val dates = (listOf(uiState.selectedDate) + breakfastDates + (0..6).map { LocalDate.now().minusDays(it.toLong()).toString() }).distinct().sortedDescending().take(30)
+            items(dates) { date ->
+                val entries = uiState.allEntries.filter { it.date == date && MealType.fromString(it.mealType) == MealType.BREAKFAST }
+                Surface(Modifier.fillMaxWidth().clickable { onDateSelected(date); dayOpen = true },
+                    shape = RoundedCornerShape(24.dp), color = Color.White,
+                    border = BorderStroke(1.dp, Color(0xFFE5EAF0))) {
+                    Column(Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.CalendarMonth,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = uiState.selectedDate,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
+                            val parsed = runCatching { dateFormat.parse(date) }.getOrNull()
+                            val calendar = Calendar.getInstance().apply { if (parsed != null) time = parsed }
+                            Column(Modifier.weight(1f)) {
+                                Text(SimpleDateFormat("EEEE", Locale.getDefault()).format(calendar.time), fontSize = 18.sp, color = Ink)
+                                Text(SimpleDateFormat("d MMMM yyyy", Locale.getDefault()).format(calendar.time), fontSize = 13.sp, color = Muted)
+                            }
+                            Surface(Modifier.size(42.dp).clickable { onDateSelected(date); onAddFood() },
+                                shape = CircleShape, color = Color(0xFFE0CEFF)) {
+                                Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Add, "Add breakfast", tint = Ink) }
+                            }
                         }
-
-                        IconButton(onClick = { shiftDate(1) }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                contentDescription = "Next Day"
-                            )
+                        Spacer(Modifier.height(12.dp))
+                        if (entries.isEmpty()) Text("No breakfast logged yet", color = Muted, fontSize = 13.sp)
+                        else entries.take(2).forEach { entry ->
+                            Text("${entry.foodName} · ${entry.calories} kcal", Modifier.padding(vertical = 5.dp),
+                                color = Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
             }
-
-            // 2. Total Calories Overview Card
+        } else {
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Total Calorie Intake",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "${uiState.totalCalories} / ${uiState.dailyGoal} kcal",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                val entries = uiState.selectedDateEntries.filter { MealType.fromString(it.mealType) == MealType.BREAKFAST }
+                val calories = entries.sumOf { it.calories }
+                Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), color = Pale) {
+                    Column(Modifier.padding(17.dp)) {
+                        Row(Modifier.fillMaxWidth()) {
+                            Text("Calories Intake", Modifier.weight(1f), color = Ink)
+                            Text("${calories}kcal", color = Muted, fontSize = 13.sp)
                         }
-
-                        val percentage = if (uiState.dailyGoal > 0) {
-                            ((uiState.totalCalories.toFloat() / uiState.dailyGoal) * 100).toInt()
-                        } else 0
-
-                        LinearProgressIndicator(
-                            progress = { (uiState.totalCalories.toFloat() / uiState.dailyGoal.coerceAtLeast(1)).coerceIn(0f, 1f) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(10.dp)
-                                .clip(RoundedCornerShape(5.dp)),
-                            color = if (uiState.isOverGoal) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                        )
-
-                        Text(
-                            text = "$percentage% of daily calorie target reached (${uiState.selectedDateEntries.size} entries logged)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Spacer(Modifier.height(12.dp))
+                        LinearProgressIndicator(progress = { (calories.toFloat() / uiState.dailyGoal.coerceAtLeast(1)).coerceIn(0f, 1f) },
+                            modifier = Modifier.fillMaxWidth().height(11.dp), color = Violet, trackColor = Color.White)
+                        Spacer(Modifier.height(22.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            MacroRing("Carbs", entries.sumOf { it.carbsGrams }, uiState.targetCarbsGrams.toDouble(), Color(0xFFD9BBFF), Modifier.weight(1f))
+                            MacroRing("Protein", entries.sumOf { it.proteinGrams }, uiState.targetProteinGrams.toDouble(), Color(0xFFFFD975), Modifier.weight(1f))
+                            MacroRing("Fat", entries.sumOf { it.fatGrams }, uiState.targetFatGrams.toDouble(), Color(0xFFFFA8AC), Modifier.weight(1f))
+                            MacroRing("Fiber", entries.sumOf { it.fiberGrams }, 30.0, Color(0xFFA5D727), Modifier.weight(1f))
+                        }
                     }
                 }
             }
-
-            // 3. Meal Category Breakdowns
+            val entries = uiState.selectedDateEntries.filter { MealType.fromString(it.mealType) == MealType.BREAKFAST }
+            if (entries.isEmpty()) item { Text("No breakfast logged for this day", color = Muted) }
+            items(entries, key = { it.id }) { entry ->
+                Surface(Modifier.fillMaxWidth().clickable { onMealClick(entry) }, shape = RoundedCornerShape(23.dp),
+                    color = Color.White, border = BorderStroke(1.dp, Color(0xFFE5EAF0))) {
+                    Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(76.dp).background(Pale, RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+                            NakaPhoto(R.drawable.nakafit_food, "Food photograph", Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)))
+                        }
+                        Spacer(Modifier.width(15.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(entry.foodName, color = Ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text("${entry.calories}kcal", color = Ink, fontSize = 13.sp)
+                        }
+                    }
+                }
+            }
             item {
-                Text(
-                    text = "Nutrition Breakdown by Meal",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            MealType.entries.forEach { mealType ->
-                val mealCalories = uiState.mealBreakdown[mealType.displayName] ?: 0
-                val entriesForMeal = uiState.selectedDateEntries.filter {
-                    it.mealType.equals(mealType.displayName, ignoreCase = true)
-                }
-
-                item {
-                    MealCategoryBreakdownCard(
-                        mealType = mealType,
-                        calories = mealCalories,
-                        totalDailyCalories = uiState.totalCalories,
-                        entriesCount = entriesForMeal.size
-                    )
-                }
-            }
-
-            // 4. Logged Entries for this date
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Logged Items (${uiState.selectedDateEntries.size})",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            if (uiState.selectedDateEntries.isEmpty()) {
-                item {
-                    Text(
-                        text = "No food entries recorded for ${uiState.selectedDate}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 12.dp)
-                    )
-                }
-            } else {
-                items(
-                    items = uiState.selectedDateEntries,
-                    key = { it.id }
-                ) { entry ->
-                    FoodEntryItem(
-                        foodEntry = entry,
-                        onDeleteClick = { onDeleteEntry(entry) }
-                    )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = onMealScan, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text("Scan a Meal") }
+                    Button(onClick = onScanBarcode, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text("Scan Barcode") }
                 }
             }
         }
@@ -269,89 +162,14 @@ fun NutritionScreen(
 }
 
 @Composable
-fun MealCategoryBreakdownCard(
-    mealType: MealType,
-    calories: Int,
-    totalDailyCalories: Int,
-    entriesCount: Int
-) {
-    val (color, icon) = getMealTypeDetails(mealType)
-    val percentage = if (totalDailyCalories > 0) {
-        ((calories.toFloat() / totalDailyCalories) * 100).toInt()
-    } else 0
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .background(color = color.copy(alpha = 0.2f), shape = CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = color,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column {
-                        Text(
-                            text = mealType.displayName,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "$entriesCount items",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "$calories kcal",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = color
-                    )
-                    Text(
-                        text = "$percentage% of total",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            LinearProgressIndicator(
-                progress = { if (totalDailyCalories > 0) (calories.toFloat() / totalDailyCalories).coerceIn(0f, 1f) else 0f },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp)),
-                color = color,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+private fun MacroRing(label: String, amount: Double, target: Double, color: Color, modifier: Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(progress = { (amount / target.coerceAtLeast(1.0)).toFloat().coerceIn(0f, 1f) },
+                color = color, trackColor = Color(0xFFE9ECEF), strokeWidth = 7.dp)
         }
+        Spacer(Modifier.height(5.dp))
+        Text(label, color = Ink, fontSize = 12.sp)
+        Text("${amount.toInt()}g", color = Muted, fontSize = 11.sp)
     }
 }

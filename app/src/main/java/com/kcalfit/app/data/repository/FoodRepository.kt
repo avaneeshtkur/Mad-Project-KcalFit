@@ -105,10 +105,9 @@ class FoodRepository(
 
     // --- Seed Initial Master Food & Demo Data ---
     suspend fun seedSampleDataIfNeeded(force: Boolean = false) {
-        if (userPreferences.isSampleSeeded() && !force) return
-
-        // Seed Master Foods dataset
-        if (foodItemDao.getMasterFoodCount() == 0 || force) {
+        // The old preference can outlive a Room destructive migration. Room's actual
+        // contents, not a preference flag, determine whether starter foods are needed.
+        run {
             val masterFoods = listOf(
                 FoodItemEntity(name = "Roti / Chapati", brand = "Indian Homemade", category = "Grains", calories = 120, proteinGrams = 3.5, carbsGrams = 22.0, fatGrams = 1.2, barcode = "890100100001"),
                 FoodItemEntity(name = "Steamed Rice", brand = "Generic", category = "Grains", calories = 205, proteinGrams = 4.2, carbsGrams = 45.0, fatGrams = 0.4, barcode = "890100100002"),
@@ -124,7 +123,8 @@ class FoodRepository(
                 FoodItemEntity(name = "Greek Yogurt", brand = "Amul / Nestle", category = "Dairy", calories = 120, proteinGrams = 10.0, carbsGrams = 8.0, fatGrams = 3.0, barcode = "890100100012"),
                 FoodItemEntity(name = "Whole Almonds", brand = "Nutraj", category = "Snacks", calories = 160, proteinGrams = 6.0, carbsGrams = 6.0, fatGrams = 14.0, barcode = "890100100013")
             )
-            foodItemDao.insertFoodItems(masterFoods)
+            val missing = if (force) masterFoods else masterFoods.filter { foodItemDao.findByBarcode(it.barcode.orEmpty()) == null }
+            if (missing.isNotEmpty()) foodItemDao.insertFoodItems(missing)
         }
 
         // Seed Master Exercises dataset
@@ -141,54 +141,7 @@ class FoodRepository(
             exerciseDao.insertMasterExercises(masterExercises)
         }
 
-        // Seed Default User Profile if empty
-        if (userDao.getUserProfile() == null) {
-            userDao.insertOrUpdateUser(
-                UserEntity(
-                    id = 1,
-                    name = "Avaneesh Thakur",
-                    email = "avaneesh@calfit.app",
-                    isLoggedIn = true,
-                    isOnboarded = true,
-                    age = 22,
-                    sex = "MALE",
-                    heightCm = 175.0,
-                    weightKg = 72.0,
-                    targetWeightKg = 68.0,
-                    activityLevel = "MODERATELY_ACTIVE",
-                    fitnessGoal = "LOSE_WEIGHT",
-                    dailyCalorieGoal = 2100,
-                    targetProteinGrams = 150,
-                    targetCarbsGrams = 210,
-                    targetFatGrams = 60,
-                    currentStreakDays = 7,
-                    lastLoggedDate = SimpleDateFormat("yyyy-MM-DD", Locale.getDefault()).format(Date())
-                )
-            )
-        }
-
-        // Seed Today's Demo Food Entries
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val todayDate = dateFormat.format(Date())
-
-        if (foodEntryDao.getEntryCount() == 0 || force) {
-            val sampleEntries = listOf(
-                FoodEntry(foodName = "Oatmeal with Honey & Nuts", brand = "Homemade", mealType = "Breakfast", calories = 320, proteinGrams = 9.0, carbsGrams = 48.0, fatGrams = 6.0, quantity = "1 bowl (250g)", date = todayDate),
-                FoodEntry(foodName = "Boiled Eggs", brand = "Farm Fresh", mealType = "Breakfast", calories = 155, proteinGrams = 13.0, carbsGrams = 1.0, fatGrams = 10.5, quantity = "2 eggs", date = todayDate),
-                FoodEntry(foodName = "Grilled Chicken & Brown Rice", brand = "Fitness Meal", mealType = "Lunch", calories = 520, proteinGrams = 42.0, carbsGrams = 54.0, fatGrams = 8.0, quantity = "1 bowl", date = todayDate),
-                FoodEntry(foodName = "Dal Tadka & Roti", brand = "Home Made", mealType = "Dinner", calories = 410, proteinGrams = 16.0, carbsGrams = 62.0, fatGrams = 9.0, quantity = "1 bowl + 2 rotis", date = todayDate),
-                FoodEntry(foodName = "Apple & Almonds", brand = "Fresh", mealType = "Snack", calories = 180, proteinGrams = 4.0, carbsGrams = 26.0, fatGrams = 7.0, quantity = "1 apple + 10 almonds", date = todayDate)
-            )
-            foodEntryDao.insertFoodEntries(sampleEntries)
-
-            // Seed Water & Weight Logs for today
-            lifestyleDao.insertWaterEntry(WaterEntry(amountMl = 1750, date = todayDate))
-            lifestyleDao.insertWeightEntry(WeightEntry(weightKg = 72.0, date = todayDate, notes = "Morning weight"))
-            exerciseDao.insertExerciseEntry(ExerciseEntry(exerciseName = "Morning Jogging", category = "CARDIO", durationMinutes = 30, distanceKm = 4.2, caloriesBurned = 320, date = todayDate))
-
-            // Seed Initial Coach Welcome Message
-            lifestyleDao.insertCoachMessage(CoachMessageEntity(sender = "COACH", messageText = "Welcome to Cal Fit! I'm your AI Nutrition Assistant. Ask me anything about your daily meals, macros, or calorie target!"))
-        }
+        // User and tracking data are intentionally never auto-created. Registration owns that flow.
 
         userPreferences.setSampleSeeded(true)
     }

@@ -1,140 +1,106 @@
 package com.kcalfit.app.ui.screens
 
-import androidx.compose.foundation.clickable
+import android.app.DatePickerDialog
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.kcalfit.app.data.model.FoodItemEntity
 import com.kcalfit.app.data.model.MealType
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import com.kcalfit.app.ui.nakafit.*
+import java.time.LocalDate
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun AddFoodScreen(
-    initialMealType: MealType = MealType.BREAKFAST,
-    searchResults: List<FoodItemEntity>,
+fun AddFoodScreen(initialMealType: MealType = MealType.BREAKFAST, searchResults: List<FoodItemEntity>,
     onSearchQueryChange: (String) -> Unit,
-    onAddFoodSubmit: (foodName: String, mealType: String, calories: Int, protein: Double, carbs: Double, fat: Double, fiber: Double, sugar: Double, sodium: Double, quantity: String, date: String) -> Unit,
-    onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var query by remember { mutableStateOf("") }
-    var selectedFood by remember { mutableStateOf<FoodItemEntity?>(null) }
-    var meal by remember(initialMealType) { mutableStateOf(initialMealType) }
-    var quantity by remember { mutableStateOf("1") }
-    val date = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()) }
-    val multiplier = quantity.toDoubleOrNull()?.coerceAtLeast(0.1) ?: 1.0
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Add food") },
-                navigationIcon = { IconButton(onNavigateBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } }
-            )
-        }, modifier = modifier
-    ) { padding ->
-        LazyColumn(
-            Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            item {
-                Text("Search your food database", style = MaterialTheme.typography.headlineSmall)
-                Text("Choose a match to import its calories and nutrition automatically.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it; selectedFood = null; onSearchQueryChange(it) },
-                    modifier = Modifier.fillMaxWidth(),
-                    leadingIcon = { Icon(Icons.Default.Search, null) },
-                    placeholder = { Text("Search chicken, rice, paneer...") },
-                    label = { Text("Food name") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp)
-                )
-            }
-            if (query.isNotBlank() && selectedFood == null) {
-                if (searchResults.isEmpty()) item {
-                    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                        Text("No match found", Modifier.padding(18.dp), style = MaterialTheme.typography.titleMedium)
-                    }
-                } else items(searchResults.take(30), key = { it.id }) { food ->
-                    FoodSearchResult(food) {
-                        selectedFood = food
-                        query = food.name
-                    }
-                }
-            }
-            item {
-                Text("Meal", style = MaterialTheme.typography.titleMedium)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MealType.entries.forEach { type ->
-                        FilterChip(selected = meal == type, onClick = { meal = type }, label = { Text(if (type == MealType.SNACK) "Snacks" else type.displayName) })
-                    }
-                }
-            }
-            selectedFood?.let { food ->
-                item {
-                    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
-                        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(food.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                            Text("${food.servingSize} ${food.servingUnit} per serving", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            NutritionGrid(food, multiplier)
-                            OutlinedTextField(quantity, { quantity = it }, label = { Text("Servings") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                            Button(
-                                onClick = {
-                                    onAddFoodSubmit(food.name, meal.displayName,
-                                        (food.calories * multiplier).toInt(), food.proteinGrams * multiplier,
-                                        food.carbsGrams * multiplier, food.fatGrams * multiplier,
-                                        food.fiberGrams * multiplier, food.sugarGrams * multiplier,
-                                        food.sodiumMg * multiplier, "$multiplier serving$", date)
-                                    onNavigateBack()
-                                }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)
-                            ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(6.dp)); Text("Add to ${meal.displayName}") }
-                        }
-                    }
-                }
-            }
-            if (query.isBlank()) item {
-                Text("Nutrition values are taken from the selected database serving. Search first to add a verified item.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+    onAddFoodSubmit: (String, String, Int, Double, Double, Double, Double, Double, Double, String, String) -> Unit,
+    onNavigateBack: () -> Unit, initialFood: FoodItemEntity? = null, initialDate: String = LocalDate.now().toString(),
+    modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var query by remember(initialFood) { mutableStateOf(initialFood?.name.orEmpty()) }
+    var selected by remember(initialFood) { mutableStateOf(initialFood) }
+    var meal by remember { mutableStateOf(initialMealType) }
+    var servings by remember { mutableStateOf("1") }
+    var date by remember { mutableStateOf(initialDate) }
+    var manual by remember { mutableStateOf(false) }
+    var calories by remember { mutableStateOf("") }
+    var protein by remember { mutableStateOf("0") }
+    var carbs by remember { mutableStateOf("0") }
+    var fat by remember { mutableStateOf("0") }
+    var error by remember { mutableStateOf<String?>(null) }
+    val foodFieldColors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+        focusedLabelColor = MaterialTheme.colorScheme.primary,
+        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        cursorColor = MaterialTheme.colorScheme.primary,
+        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        unfocusedBorderColor = MaterialTheme.colorScheme.outline
+    )
+    NakaPage("Add Food", onNavigateBack) {
+        Text("Search your food or enter a meal manually.", color = Naka.Muted)
+        OutlinedTextField(query, { query = it; selected = null; onSearchQueryChange(it); error = null }, Modifier.fillMaxWidth(),
+            label = { Text("Food name") }, singleLine = true, shape = RoundedCornerShape(28.dp), colors = foodFieldColors)
+        if (selected == null && !manual && query.isNotBlank()) {
+            if (searchResults.isEmpty()) Text("No matching food found", color = Naka.Muted)
+            searchResults.take(20).forEach { food -> NakaRow(food.name, "${food.calories} kcal · ${food.servingSize} ${food.servingUnit}", {
+                selected = food; query = food.name
+            }) }
+        }
+        TextButton({ manual = !manual; selected = null }) { Text(if (manual) "Use Food Search" else "Enter Nutrition Manually", color = Naka.Violet) }
+        if (manual) {
+            listOf("Calories (kcal)" to calories, "Protein (g)" to protein, "Carbs (g)" to carbs, "Fat (g)" to fat).forEachIndexed { index,(label,value) ->
+                OutlinedTextField(value, { when(index) { 0 -> calories=it; 1 -> protein=it; 2 -> carbs=it; else -> fat=it } },
+                    Modifier.fillMaxWidth(), label = { Text(label) }, singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), shape = RoundedCornerShape(28.dp), colors = foodFieldColors)
             }
         }
-    }
-}
-
-@Composable
-private fun FoodSearchResult(food: FoodItemEntity, onClick: () -> Unit) {
-    Card(Modifier.fillMaxWidth().clickable(onClick = onClick), shape = RoundedCornerShape(16.dp)) {
-        Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(Modifier.weight(1f)) {
-                Text(food.name, style = MaterialTheme.typography.titleMedium)
-                Text("${food.servingSize} ${food.servingUnit}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+        // Keep the selector geometry stable in both states and on narrow phones.
+        MealType.entries.chunked(2).forEach { rowMeals ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                rowMeals.forEach { type ->
+                    FilterChip(
+                        selected = meal == type,
+                        onClick = { meal = type },
+                        modifier = Modifier.weight(1f),
+                        label = { Text(type.displayName, maxLines = 1) }
+                    )
+                }
+                if (rowMeals.size == 1) Spacer(Modifier.weight(1f))
             }
-            Column { Text("${food.calories} kcal", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold); Text("P ${food.proteinGrams}g · C ${food.carbsGrams}g · F ${food.fatGrams}g", style = MaterialTheme.typography.bodySmall) }
         }
+        NakaRow("Date", date, {
+            val parsed = runCatching { LocalDate.parse(date) }.getOrDefault(LocalDate.now())
+            DatePickerDialog(context, { _, year, month, day -> date=LocalDate.of(year,month+1,day).toString() },
+                parsed.year,parsed.monthValue-1,parsed.dayOfMonth).show()
+        })
+        if (selected != null) {
+            Text(selected!!.name, style = MaterialTheme.typography.titleLarge)
+            Text("${selected!!.calories} kcal · P ${selected!!.proteinGrams}g · C ${selected!!.carbsGrams}g · F ${selected!!.fatGrams}g per serving", color=Naka.Muted)
+            OutlinedTextField(servings,{ servings=it },Modifier.fillMaxWidth(),label={ Text("Servings") },
+                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),shape=RoundedCornerShape(28.dp), colors=foodFieldColors)
+        }
+        error?.let { Text(it,color=MaterialTheme.colorScheme.error) }
+        NakaButton("Add to ${meal.displayName}", {
+            if (manual) {
+                val c=calories.toIntOrNull();val p=protein.toDoubleOrNull();val cb=carbs.toDoubleOrNull();val f=fat.toDoubleOrNull()
+                if (query.isBlank() || c==null || c<0 || p==null || cb==null || f==null || p<0 || cb<0 || f<0) error="Enter a food name and valid nutrition values"
+                else onAddFoodSubmit(query.trim(),meal.displayName,c,p,cb,f,0.0,0.0,0.0,"1 serving",date)
+            } else {
+                val food=selected;val multiplier=servings.toDoubleOrNull()
+                if (food==null) error="Choose a food first"
+                else if (multiplier==null || !multiplier.isFinite() || multiplier<=0 || multiplier>100) error="Enter a serving count between 0 and 100"
+                else onAddFoodSubmit(food.name,meal.displayName,(food.calories*multiplier).toInt(),food.proteinGrams*multiplier,
+                    food.carbsGrams*multiplier,food.fatGrams*multiplier,food.fiberGrams*multiplier,food.sugarGrams*multiplier,
+                    food.sodiumMg*multiplier,"$multiplier servings",date)
+            }
+        })
     }
 }
-
-@Composable
-private fun NutritionGrid(food: FoodItemEntity, multiplier: Double) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Nutrition for ${"%.1f".format(multiplier)} serving${if (multiplier == 1.0) "" else "s"}", style = MaterialTheme.typography.labelLarge)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { NutritionValue("Calories", "${(food.calories * multiplier).toInt()} kcal"); NutritionValue("Protein", "${"%.1f".format(food.proteinGrams * multiplier)} g"); NutritionValue("Carbs", "${"%.1f".format(food.carbsGrams * multiplier)} g") }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { NutritionValue("Fat", "${"%.1f".format(food.fatGrams * multiplier)} g"); NutritionValue("Fiber", "${"%.1f".format(food.fiberGrams * multiplier)} g"); NutritionValue("Sugar", "${"%.1f".format(food.sugarGrams * multiplier)} g") }
-        Text("Sodium: ${"%.0f".format(food.sodiumMg * multiplier)} mg", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable private fun NutritionValue(label: String, value: String) { Column { Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(value, fontWeight = FontWeight.SemiBold) } }

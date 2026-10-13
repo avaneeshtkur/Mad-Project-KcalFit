@@ -2,6 +2,7 @@ package com.kcalfit.app.data.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import androidx.room.ColumnInfo
 
 @Entity(tableName = "master_foods")
 data class FoodItemEntity(
@@ -21,5 +22,6 @@ data class FoodItemEntity(
     val sodiumMg: Double = 0.0,
     val barcode: String? = null,
     val isCustom: Boolean = false,
-    val isFavorite: Boolean = false
+    val isFavorite: Boolean = false,
+    @ColumnInfo(defaultValue = "1") val nutritionKnown: Boolean = true
 )

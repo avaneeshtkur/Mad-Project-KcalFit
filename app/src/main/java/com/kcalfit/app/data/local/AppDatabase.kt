@@ -42,7 +42,8 @@ import com.kcalfit.app.data.model.WorkoutRoutineEntity
         FriendEntity::class,
         ActivityPostEntity::class
     ],
-    version = 4,
+    // V5 intentionally removes pre-provider demo accounts and local hash credentials.
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

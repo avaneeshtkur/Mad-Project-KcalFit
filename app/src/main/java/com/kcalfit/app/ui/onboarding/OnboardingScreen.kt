@@ -2,11 +2,14 @@ package com.kcalfit.app.ui.onboarding
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.kcalfit.app.domain.calculator.ActivityLevel
 import com.kcalfit.app.domain.calculator.FitnessGoal
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun OnboardingScreen(
     initialName: String = "Fitness User",
@@ -72,16 +76,18 @@ fun OnboardingScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Header Progress
             Text(
-                text = "Personalize Your Cal Fit Goal",
-                style = MaterialTheme.typography.titleLarge,
+                text = "Make CalFit yours",
+                style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
+            Text("A few details help us set a useful starting point.", color = MaterialTheme.colorScheme.onSurfaceVariant)
 
             LinearProgressIndicator(
                 progress = { step / 3.0f },
@@ -197,7 +203,7 @@ fun OnboardingScreen(
                                 )
                             }
                             Text("How many days a week do you exercise?", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 (1..7).forEach { days ->
                                     FilterChip(selected = exerciseDaysPerWeek == days, onClick = { exerciseDaysPerWeek = days }, label = { Text(days.toString()) })
                                 }
@@ -246,22 +252,10 @@ fun OnboardingScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Navigation Buttons
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (step > 1) {
-                    OutlinedButton(
-                        onClick = { step-- },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(50.dp),
-                        shape = RoundedCornerShape(14.dp)
-                    ) {
-                        Text("Back")
-                    }
-                }
-
                 Button(
                     onClick = {
                         if (step < 3) {
@@ -278,12 +272,19 @@ fun OnboardingScreen(
                         }
                     },
                     modifier = Modifier
-                        .weight(1f)
+                        .fillMaxWidth()
                         .height(50.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text(if (step == 3) "Calculate Goal & Finish" else "Next", fontWeight = FontWeight.Bold)
+                    Text(if (step == 3) "Calculate BMR & calories" else "Continue", fontWeight = FontWeight.Bold)
+                }
+                if (step > 1) {
+                    OutlinedButton(
+                        onClick = { step-- },
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = RoundedCornerShape(14.dp)
+                    ) { Text("Back") }
                 }
             }
         }

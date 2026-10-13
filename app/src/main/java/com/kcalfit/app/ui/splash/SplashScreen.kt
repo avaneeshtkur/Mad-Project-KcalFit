@@ -49,7 +49,7 @@ fun SplashScreen(
             targetValue = 1.0f,
             animationSpec = tween(durationMillis = 500)
         )
-        delay(2000L)
+        delay(300L)
 
         val targetRoute = when {
             userProfile == null || !userProfile.isLoggedIn -> Screen.Welcome.route
@@ -87,7 +87,7 @@ fun SplashScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "KCal Fit",
+                text = "KcalFit",
                 style = MaterialTheme.typography.displayLarge,
                 fontWeight = FontWeight.ExtraBold,
                 color = MaterialTheme.colorScheme.onPrimary

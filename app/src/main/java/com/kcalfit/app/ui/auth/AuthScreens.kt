@@ -1,60 +1,88 @@
 package com.kcalfit.app.ui.auth
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import com.kcalfit.app.ui.theme.DarkBackground
-import com.kcalfit.app.ui.theme.DarkSurface
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.kcalfit.app.ui.components.CalFitLogo
+import androidx.compose.ui.unit.sp
+
+private val FigmaNavy = Color(0xFF001B51)
+private val FigmaDeepNavy = Color(0xFF000C24)
+private val FigmaBlue = Color(0xFF003396)
+private val FigmaGray = Color(0xFF888888)
+private fun figmaBackground() = Brush.horizontalGradient(listOf(FigmaNavy, Color(0xFF0D100C)))
+
+@Composable
+private fun FigmaLogo() = Row(verticalAlignment = Alignment.CenterVertically) {
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .background(Color.White.copy(alpha = 0.15f), CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.FitnessCenter,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(28.dp)
+        )
+    }
+    Spacer(Modifier.width(12.dp))
+    Text("FitnessHub", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Medium)
+}
+
+@Composable
+private fun FigmaButton(
+    label: String,
+    filled: Boolean,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .height(48.dp)
+            .clip(RoundedCornerShape(25.dp))
+            .background(
+                if (filled) Brush.horizontalGradient(listOf(FigmaDeepNavy, FigmaBlue))
+                else Brush.linearGradient(listOf(Color.White, Color.White))
+            )
+            .then(if (filled) Modifier.border(1.dp, Color.White, RoundedCornerShape(25.dp)) else Modifier)
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label.uppercase(),
+            color = if (filled) Color.White else FigmaNavy,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
 
 @Composable
 fun WelcomeScreen(
@@ -65,81 +93,106 @@ fun WelcomeScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(DarkBackground, DarkSurface)))
-            .padding(24.dp)
+            .background(figmaBackground())
+            .padding(top = 100.dp)
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
-                modifier = Modifier
-                    .size(90.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                CalFitLogo(size = 50.dp, showText = false)
-            }
+            FigmaLogo()
+            Spacer(Modifier.height(48.dp))
+            Text("Welcome", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(54.dp))
+            FigmaButton("Sign In", true, onNavigateToLogin, modifier = Modifier.width(261.dp))
+            Spacer(Modifier.height(20.dp))
+            FigmaButton("Sign Up", false, onNavigateToRegister, modifier = Modifier.width(261.dp))
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "Build a healthier rhythm.",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.ExtraBold,
-                textAlign = TextAlign.Center,
-                color = Color.White
+@Composable
+private fun FigmaField(
+    label: String,
+    value: String,
+    placeholder: String,
+    onValueChange: (String) -> Unit,
+    password: Boolean = false,
+    visible: Boolean = false,
+    onToggleVisibility: (() -> Unit)? = null,
+    keyboardType: KeyboardType = KeyboardType.Text
+) {
+    Column(Modifier.fillMaxWidth()) {
+        Text(label, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                textStyle = TextStyle(color = Color.Black, fontSize = 14.sp),
+                keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+                visualTransformation = if (password && !visible) PasswordVisualTransformation() else VisualTransformation.None,
+                decorationBox = { inner ->
+                    Box(Modifier.weight(1f)) {
+                        if (value.isEmpty()) Text(placeholder, color = FigmaGray, fontSize = 14.sp)
+                        inner()
+                    }
+                },
+                modifier = Modifier.weight(1f)
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Your meals, movement and progress—together in one place.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.82f),
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-            Text("NUTRITION  /  ACTIVITY  /  PROGRESS", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelMedium)
-
-            Spacer(modifier = Modifier.height(48.dp))
-
-            Button(
-                onClick = onNavigateToRegister,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.primary)
-            ) {
-                Text(
-                    text = "Get Started / Create Account",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+            if (password && onToggleVisibility != null) {
+                IconButton(onClick = onToggleVisibility, modifier = Modifier.size(24.dp)) {
+                    Icon(
+                        imageVector = if (visible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        contentDescription = if (visible) "Hide password" else "Show password",
+                        tint = FigmaGray,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
+        }
+        Spacer(Modifier.height(8.dp))
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Color.Black.copy(alpha = 0.3f)))
+    }
+}
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedButton(
-                onClick = onNavigateToLogin,
+@Composable
+private fun AuthShell(
+    title: String,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(figmaBackground())
+            .imePadding()
+            .navigationBarsPadding()
+    ) {
+        Text(
+            text = title,
+            color = Color.White,
+            fontSize = 30.sp,
+            fontWeight = FontWeight.SemiBold,
+            lineHeight = 35.sp,
+            modifier = Modifier.padding(start = 36.dp, top = 60.dp)
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(top = 40.dp)
+                .clip(RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp))
+                .background(Color.White)
+        ) {
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.7f)),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 36.dp, vertical = 40.dp)
             ) {
-                Text(
-                    text = "I Already Have an Account",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
+                content()
             }
         }
     }
@@ -147,7 +200,7 @@ fun WelcomeScreen(
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: (email: String, password: String) -> Unit,
+    onLoginSuccess: (String, String) -> Unit,
     onNavigateToRegister: () -> Unit,
     onNavigateToForgotPassword: () -> Unit,
     errorMessage: String? = null,
@@ -156,125 +209,59 @@ fun LoginScreen(
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) }
+    var visible by remember { mutableStateOf(false) }
     var localError by remember { mutableStateOf<String?>(null) }
 
-    // Show either ViewModel error or local validation error
-    val displayError = errorMessage ?: localError
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .imePadding()
-            .navigationBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top
-    ) {
-        Spacer(modifier = Modifier.height(24.dp))
-        CalFitLogo(size = 44.dp, showText = false)
-        Spacer(modifier = Modifier.height(20.dp))
-        Text(
-            text = "Welcome back",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
-
-        Text("Sign in to pick up where you left off.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))
+    AuthShell("Hello\nSign In", modifier) {
+        FigmaField("Email", email, "john@email.com", { email = it; localError = null }, keyboardType = KeyboardType.Email)
+        Spacer(Modifier.height(36.dp))
+        FigmaField("Password", password, "", { password = it; localError = null }, true, visible, { visible = !visible })
+        Spacer(Modifier.height(20.dp))
+        TextButton(
+            onClick = onNavigateToForgotPassword,
+            modifier = Modifier.align(Alignment.End)
         ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it; localError = null },
-                    label = { Text("Email Address") },
-                    leadingIcon = { Icon(imageVector = Icons.Default.Email, contentDescription = null) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it; localError = null },
-                    label = { Text("Password") },
-                    leadingIcon = { Icon(imageVector = Icons.Default.Lock, contentDescription = null) },
-                    trailingIcon = {
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(
-                                imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                contentDescription = if (passwordVisible) "Hide password" else "Show password"
-                            )
-                        }
-                    },
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                displayError?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-
-                TextButton(
-                    onClick = onNavigateToForgotPassword,
-                    modifier = Modifier.align(Alignment.End)
-                ) {
-                    Text("Forgot Password?")
-                }
-
-                Button(
-                    onClick = {
-                        when {
-                            email.isBlank() -> localError = "Please enter your email"
-                            password.isBlank() -> localError = "Please enter your password"
-                            else -> onLoginSuccess(email.trim(), password)
-                        }
-                    },
-                    enabled = !isLoading,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Text("Login", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
+            Text("Forgot password?", color = Color.Black, fontSize = 13.sp)
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Don't have an account?", style = MaterialTheme.typography.bodyMedium)
+        Spacer(Modifier.height(24.dp))
+        FigmaButton(
+            label = "Sign In",
+            filled = true,
+            onClick = {
+                when {
+                    email.isBlank() -> localError = "Please enter your email"
+                    password.isBlank() -> localError = "Please enter your password"
+                    else -> onLoginSuccess(email.trim(), password)
+                }
+            },
+            enabled = !isLoading,
+            modifier = Modifier.fillMaxWidth()
+        )
+        if (isLoading) {
+            Spacer(Modifier.height(12.dp))
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp).align(Alignment.CenterHorizontally),
+                color = FigmaBlue,
+                strokeWidth = 2.dp
+            )
+        }
+        (errorMessage ?: localError)?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+        Spacer(Modifier.height(48.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Don't have an account? ", color = FigmaGray, fontSize = 14.sp)
             TextButton(onClick = onNavigateToRegister) {
-                Text("Register Now", fontWeight = FontWeight.Bold)
+                Text("Sign Up", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -282,7 +269,7 @@ fun LoginScreen(
 
 @Composable
 fun RegisterScreen(
-    onRegisterSuccess: (name: String, email: String, password: String) -> Unit,
+    onRegisterSuccess: (String, String, String) -> Unit,
     onNavigateToLogin: () -> Unit,
     errorMessage: String? = null,
     isLoading: Boolean = false,
@@ -291,127 +278,59 @@ fun RegisterScreen(
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
+    var confirm by remember { mutableStateOf("") }
+    var visible by remember { mutableStateOf(false) }
     var localError by remember { mutableStateOf<String?>(null) }
 
-    val displayError = errorMessage ?: localError
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .imePadding()
-            .navigationBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top
-    ) {
-        Spacer(modifier = Modifier.height(24.dp))
-        CalFitLogo(size = 44.dp, showText = false)
-        Spacer(modifier = Modifier.height(20.dp))
-        Text(
-            text = "Start your CalFit journey",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
+    AuthShell("Create Your\nAccount", modifier) {
+        FigmaField("Full Name", name, "John Smith", { name = it; localError = null })
+        Spacer(Modifier.height(16.dp))
+        FigmaField("Email", email, "john@email.com", { email = it; localError = null }, keyboardType = KeyboardType.Email)
+        Spacer(Modifier.height(16.dp))
+        FigmaField("Password", password, "", { password = it; localError = null }, true, visible, { visible = !visible })
+        Spacer(Modifier.height(16.dp))
+        FigmaField("Confirm Password", confirm, "", { confirm = it; localError = null }, true, visible, { visible = !visible })
+        Spacer(Modifier.height(28.dp))
+        FigmaButton(
+            label = "Sign Up",
+            filled = true,
+            onClick = {
+                when {
+                    name.isBlank() -> localError = "Please enter your name"
+                    email.isBlank() || !email.contains("@") -> localError = "Please enter a valid email"
+                    password.length < 6 -> localError = "Password must be at least 6 characters"
+                    password != confirm -> localError = "Passwords do not match"
+                    else -> onRegisterSuccess(name.trim(), email.trim(), password)
+                }
+            },
+            enabled = !isLoading,
+            modifier = Modifier.fillMaxWidth()
         )
-
-        Text("Create your account. Then we'll tailor your daily goals.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it; localError = null },
-                    label = { Text("Full Name") },
-                    leadingIcon = { Icon(imageVector = Icons.Default.Person, contentDescription = null) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it; localError = null },
-                    label = { Text("Email Address") },
-                    leadingIcon = { Icon(imageVector = Icons.Default.Email, contentDescription = null) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it; localError = null },
-                    label = { Text("Password") },
-                    leadingIcon = { Icon(imageVector = Icons.Default.Lock, contentDescription = null) },
-                    visualTransformation = PasswordVisualTransformation(),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                OutlinedTextField(
-                    value = confirmPassword,
-                    onValueChange = { confirmPassword = it; localError = null },
-                    label = { Text("Confirm Password") },
-                    leadingIcon = { Icon(imageVector = Icons.Default.Lock, contentDescription = null) },
-                    visualTransformation = PasswordVisualTransformation(),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                displayError?.let {
-                    Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                }
-
-                Button(
-                    onClick = {
-                        when {
-                            name.isBlank() -> localError = "Please enter your name"
-                            email.isBlank() || !email.contains("@") -> localError = "Please enter a valid email"
-                            password.length < 8 -> localError = "Password must be at least 8 characters"
-                            password != confirmPassword -> localError = "Passwords do not match"
-                            else -> onRegisterSuccess(name.trim(), email.trim(), password)
-                        }
-                    },
-                    enabled = !isLoading,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Text("Continue to Verification", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
+        if (isLoading) {
+            Spacer(Modifier.height(12.dp))
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp).align(Alignment.CenterHorizontally),
+                color = FigmaBlue,
+                strokeWidth = 2.dp
+            )
         }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Already registered?", style = MaterialTheme.typography.bodyMedium)
+        (errorMessage ?: localError)?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+        Spacer(Modifier.height(28.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Already registered? ", color = FigmaGray, fontSize = 14.sp)
             TextButton(onClick = onNavigateToLogin) {
-                Text("Login", fontWeight = FontWeight.Bold)
+                Text("Sign In", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -424,8 +343,8 @@ fun ForgotPasswordScreen(
     modifier: Modifier = Modifier
 ) {
     var email by remember { mutableStateOf("") }
-    var sentMessage by remember { mutableStateOf<String?>(null) }
-    var resetLoading by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -437,55 +356,35 @@ fun ForgotPasswordScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text("Reset Password", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(Modifier.height(12.dp))
         Text(
-            text = "Enter your email address and we'll send you a password reset link.",
-            style = MaterialTheme.typography.bodyMedium,
+            "Enter your email address and we'll send you a password reset link.",
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email Address") },
-            leadingIcon = { Icon(imageVector = Icons.Default.Email, contentDescription = null) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        sentMessage?.let {
-            Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
+        Spacer(Modifier.height(24.dp))
+        FigmaField("Email Address", email, "john@email.com", { email = it }, keyboardType = KeyboardType.Email)
+        Spacer(Modifier.height(16.dp))
+        message?.let { Text(it, color = MaterialTheme.colorScheme.primary, fontSize = 13.sp) }
+        Spacer(Modifier.height(16.dp))
         Button(
             onClick = {
-                if (!email.contains("@")) sentMessage = "Enter a valid email address"
-                else {
-                    resetLoading = true
-                    onRequestReset(email.trim()) { error ->
-                        resetLoading = false
-                        sentMessage = error ?: "If this account exists, a reset email is on its way."
+                if (!email.contains("@")) {
+                    message = "Enter a valid email address"
+                } else {
+                    loading = true
+                    onRequestReset(email.trim()) {
+                        loading = false
+                        message = it ?: "If this account exists, a reset email is on its way."
                     }
                 }
             },
-            enabled = !resetLoading,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
-            shape = RoundedCornerShape(14.dp)
+            enabled = !loading,
+            modifier = Modifier.fillMaxWidth().height(50.dp)
         ) {
             Text("Send Reset Link", fontWeight = FontWeight.Bold)
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
+        Spacer(Modifier.height(12.dp))
         TextButton(onClick = onNavigateBackToLogin) {
             Text("Back to Login")
         }

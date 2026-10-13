@@ -51,7 +51,10 @@ class FoodRepository(
     fun getEntriesForDate(date: String): Flow<List<FoodEntry>> = foodEntryDao.getEntriesForDate(date)
     fun getAllEntries(): Flow<List<FoodEntry>> = foodEntryDao.getAllEntries()
     fun getTotalCaloriesForDate(date: String): Flow<Int?> = foodEntryDao.getTotalCaloriesForDate(date)
-    suspend fun insertFoodEntry(foodEntry: FoodEntry): Long = foodEntryDao.insertFoodEntry(foodEntry)
+    suspend fun insertFoodEntry(foodEntry: FoodEntry): Long {
+        com.kcalfit.app.domain.calculator.FoodDiaryRules.validate(foodEntry)
+        return foodEntryDao.insertFoodEntry(foodEntry.copy(id = 0))
+    }
     suspend fun deleteFoodEntry(foodEntry: FoodEntry) = foodEntryDao.deleteFoodEntry(foodEntry)
 
     // --- Master Foods Search & Barcode ---

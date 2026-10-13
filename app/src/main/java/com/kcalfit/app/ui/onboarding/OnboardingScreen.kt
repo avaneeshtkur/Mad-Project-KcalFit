@@ -1,292 +1,104 @@
 package com.kcalfit.app.ui.onboarding
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.kcalfit.app.R
 import com.kcalfit.app.domain.calculator.ActivityLevel
 import com.kcalfit.app.domain.calculator.FitnessGoal
+import com.kcalfit.app.ui.nakafit.*
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun OnboardingScreen(
-    initialName: String = "Fitness User",
-    onOnboardingCompleted: (
-        name: String, age: Int, sex: String, heightCm: Double, weightKg: Double,
-        targetWeightKg: Double, activityLevel: String, goal: String, exerciseDaysPerWeek: Int
-    ) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var step by remember { mutableIntStateOf(1) }
-
-    // Step 1 values
-    var name by remember { mutableStateOf(initialName) }
-    var ageText by remember { mutableStateOf("22") }
-    var sexStr by remember { mutableStateOf("MALE") }
-    var heightText by remember { mutableStateOf("175") }
-    var weightText by remember { mutableStateOf("72") }
-
-    // Step 2 values
-    var selectedActivity by remember { mutableStateOf(ActivityLevel.MODERATELY_ACTIVE) }
-    var exerciseDaysPerWeek by remember { mutableIntStateOf(3) }
-
-    // Step 3 values
-    var selectedGoal by remember { mutableStateOf(FitnessGoal.LOSE_WEIGHT) }
-    var targetWeightText by remember { mutableStateOf("68") }
-
-    Scaffold(
-        modifier = modifier
-    ) { paddingValues ->
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .imePadding()
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Header Progress
-            Text(
-                text = "Make CalFit yours",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Text("A few details help us set a useful starting point.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-            LinearProgressIndicator(
-                progress = { step / 3.0f },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            Text(
-                text = "Step $step of 3",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            when (step) {
-                1 -> {
-                    // STEP 1: Personal Measurements
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(20.dp),
-                            verticalArrangement = Arrangement.spacedBy(14.dp)
-                        ) {
-                            Text("1. Personal Details", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-
-                            OutlinedTextField(
-                                value = name,
-                                onValueChange = { name = it },
-                                label = { Text("Name") },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-
-                            OutlinedTextField(
-                                value = ageText,
-                                onValueChange = { ageText = it },
-                                label = { Text("Age (years)") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-
-                            Text("Sex", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                FilterChip(
-                                    selected = sexStr == "MALE",
-                                    onClick = { sexStr = "MALE" },
-                                    label = { Text("Male") },
-                                    modifier = Modifier.weight(1f)
-                                )
-                                FilterChip(
-                                    selected = sexStr == "FEMALE",
-                                    onClick = { sexStr = "FEMALE" },
-                                    label = { Text("Female") },
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-
-                            OutlinedTextField(
-                                value = heightText,
-                                onValueChange = { heightText = it },
-                                label = { Text("Height (cm)") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-
-                            OutlinedTextField(
-                                value = weightText,
-                                onValueChange = { weightText = it },
-                                label = { Text("Current Weight (kg)") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp)
-                            )
+fun OnboardingScreen(initialName: String = "Fitness User",
+    onOnboardingCompleted: (String, Int, String, Double, Double, Double, String, String, Int) -> Unit,
+    modifier: Modifier = Modifier) {
+    var step by rememberSaveable { mutableIntStateOf(0) }
+    var name by rememberSaveable { mutableStateOf(initialName) }
+    var age by rememberSaveable { mutableStateOf("25") }
+    var sex by rememberSaveable { mutableStateOf("FEMALE") }
+    var height by rememberSaveable { mutableFloatStateOf(170f) }
+    var weight by rememberSaveable { mutableFloatStateOf(64f) }
+    var target by rememberSaveable { mutableFloatStateOf(60f) }
+    var goal by rememberSaveable { mutableStateOf(FitnessGoal.LOSE_WEIGHT.name) }
+    var activity by rememberSaveable { mutableStateOf(ActivityLevel.MODERATELY_ACTIVE.name) }
+    var days by rememberSaveable { mutableIntStateOf(3) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val titles = listOf("Welcome to KcalFit", "What is your goal?", "Let's get to know you", "What is your height?",
+        "What is your weight?", "Your activity level", "You're all set!")
+    NakaPage(if (step == 0) "KcalFit" else "Set Your Goals", if (step > 0) ({ step-- }) else null) {
+        LinearProgressIndicator(progress = { (step + 1) / 7f }, Modifier.fillMaxWidth().height(5.dp), color = Naka.Violet, trackColor = Naka.Lavender)
+        Text("${step + 1} of 7", color = Naka.Muted, fontSize = 12.sp)
+        AnimatedContent(step, label = "onboarding steps") { selectedStep ->
+            Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                Text(titles[selectedStep], fontSize = 29.sp, lineHeight = 35.sp, color = Naka.Ink)
+                when (selectedStep) {
+                    0 -> {
+                        NakaPhoto(R.drawable.nakafit_runner, "Runner on a track", Modifier.fillMaxWidth().height(330.dp).clip(RoundedCornerShape(26.dp)))
+                        Text("A few simple steps to make your health journey personal.", color = Naka.Muted)
+                    }
+                    1 -> FitnessGoal.entries.forEach { item ->
+                        Surface(Modifier.fillMaxWidth().clickable { goal = item.name }, shape = RoundedCornerShape(24.dp),
+                            color = if (goal == item.name) Naka.Lavender else Naka.Pale,
+                            border = if (goal == item.name) BorderStroke(1.dp, Naka.Violet) else null) {
+                            Text(item.displayName, Modifier.padding(22.dp), color = Naka.Ink)
                         }
                     }
-                }
-
-                2 -> {
-                    // STEP 2: Activity Level
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(20.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Text("2. Activity Level", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text("How active are you on a typical week?", style = MaterialTheme.typography.bodySmall)
-
-                            ActivityLevel.entries.forEach { level ->
-                                FilterChip(
-                                    selected = selectedActivity == level,
-                                    onClick = { selectedActivity = level },
-                                    label = { Text(level.displayName, fontWeight = FontWeight.Medium) },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-                            Text("How many days a week do you exercise?", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                (1..7).forEach { days ->
-                                    FilterChip(selected = exerciseDaysPerWeek == days, onClick = { exerciseDaysPerWeek = days }, label = { Text(days.toString()) })
-                                }
-                            }
+                    2 -> {
+                        OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Your name") }, shape = RoundedCornerShape(28.dp))
+                        OutlinedTextField(age, { age = it.filter(Char::isDigit).take(3) }, Modifier.fillMaxWidth(), label = { Text("Age") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), shape = RoundedCornerShape(28.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            listOf("FEMALE", "MALE").forEach { item -> FilterChip(sex == item, { sex = item },
+                                label = { Text(item.lowercase().replaceFirstChar(Char::uppercase)) }, modifier = Modifier.weight(1f)) }
                         }
                     }
-                }
-
-                3 -> {
-                    // STEP 3: Fitness Goal
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(20.dp),
-                            verticalArrangement = Arrangement.spacedBy(14.dp)
-                        ) {
-                            Text("3. Your Fitness Goal", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-
-                            FitnessGoal.entries.forEach { goal ->
-                                FilterChip(
-                                    selected = selectedGoal == goal,
-                                    onClick = { selectedGoal = goal },
-                                    label = { Text(goal.displayName, fontWeight = FontWeight.SemiBold) },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-
-                            OutlinedTextField(
-                                value = targetWeightText,
-                                onValueChange = { targetWeightText = it },
-                                label = { Text("Target Weight (kg)") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp)
-                            )
+                    3 -> {
+                        Spacer(Modifier.height(60.dp))
+                        Text("${height.toInt()}", Modifier.align(Alignment.CenterHorizontally), fontSize = 58.sp, color = Naka.Ink)
+                        Text("centimeters", Modifier.align(Alignment.CenterHorizontally), color = Naka.Violet)
+                        Slider(height, { height = it }, valueRange = 100f..230f, steps = 129)
+                        Text("Log and monitor your daily health data.", color = Naka.Muted)
+                    }
+                    4 -> {
+                        Text("${"%.1f".format(weight)} kg", Modifier.align(Alignment.CenterHorizontally), fontSize = 44.sp, color = Naka.Ink)
+                        Slider(weight, { weight = it }, valueRange = 30f..200f)
+                        Text("Target weight", color = Naka.Muted)
+                        Text("${"%.1f".format(target)} kg", fontSize = 28.sp, color = Naka.Ink)
+                        Slider(target, { target = it }, valueRange = 30f..200f)
+                    }
+                    5 -> {
+                        ActivityLevel.entries.forEach { item -> FilterChip(activity == item.name, { activity = item.name },
+                            label = { Text(item.displayName) }, modifier = Modifier.fillMaxWidth()) }
+                        Text("Exercise days per week", color = Naka.Ink)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            (1..7).forEach { day -> FilterChip(days == day, { days = day }, label = { Text("$day") }, modifier = Modifier.weight(1f)) }
                         }
                     }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Navigation Buttons
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = {
-                        if (step < 3) {
-                            step++
-                        } else {
-                            val age = ageText.toIntOrNull() ?: 22
-                            val height = heightText.toDoubleOrNull() ?: 175.0
-                            val weight = weightText.toDoubleOrNull() ?: 72.0
-                            val targetWeight = targetWeightText.toDoubleOrNull() ?: 68.0
-
-                            onOnboardingCompleted(
-                                name, age, sexStr, height, weight, targetWeight, selectedActivity.name, selectedGoal.name, exerciseDaysPerWeek
-                            )
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text(if (step == 3) "Calculate BMR & calories" else "Continue", fontWeight = FontWeight.Bold)
-                }
-                if (step > 1) {
-                    OutlinedButton(
-                        onClick = { step-- },
-                        modifier = Modifier.fillMaxWidth().height(48.dp),
-                        shape = RoundedCornerShape(14.dp)
-                    ) { Text("Back") }
+                    6 -> {
+                        NakaPhoto(R.drawable.nakafit_meditation, "Mindful recovery by the lake", Modifier.fillMaxWidth().height(250.dp).clip(RoundedCornerShape(24.dp)))
+                        Text("Your plan starts with ${days} active days each week.", fontSize = 22.sp, color = Naka.Ink)
+                        Text("${height.toInt()} cm · ${"%.1f".format(weight)} kg · Target ${"%.1f".format(target)} kg", color = Naka.Muted)
+                    }
                 }
             }
         }
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        NakaButton(if (step == 6) "Let's Get Started" else "Continue", {
+            if (step == 2 && (name.isBlank() || (age.toIntOrNull() ?: 0) !in 13..100)) error = "Enter your name and an age between 13 and 100"
+            else { error = null; if (step < 6) step++ else onOnboardingCompleted(name.trim(), age.toInt(), sex,
+                height.toDouble(), weight.toDouble(), target.toDouble(), activity, goal, days) }
+        })
     }
 }

@@ -2,6 +2,7 @@ package com.kcalfit.app.data.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import androidx.room.ColumnInfo
 
 @Entity(tableName = "food_entries")
 data class FoodEntry(
@@ -19,5 +20,6 @@ data class FoodEntry(
     val sodiumMg: Double = 0.0,
     val quantity: String = "1 serving",
     val date: String, // Format: YYYY-MM-DD
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    @ColumnInfo(defaultValue = "1") val nutritionKnown: Boolean = true
 )

@@ -44,7 +44,7 @@ import com.kcalfit.app.data.model.WorkoutRoutineEntity
         FriendEntity::class,
         ActivityPostEntity::class
     ],
-    // V5 intentionally removes pre-provider demo accounts and local hash credentials.
+    // V6 preserves the existing diary and tracks availability of recorded macros.
     version = 6,
     exportSchema = false
 )
@@ -71,6 +71,9 @@ abstract class AppDatabase : RoomDatabase() {
                         override fun migrate(db: SupportSQLiteDatabase) {
                             db.execSQL("ALTER TABLE food_entries ADD COLUMN nutritionKnown INTEGER NOT NULL DEFAULT 1")
                             db.execSQL("UPDATE food_entries SET nutritionKnown = 0 WHERE proteinGrams = 0 AND carbsGrams = 0 AND fatGrams = 0")
+                            db.execSQL("ALTER TABLE master_foods ADD COLUMN nutritionKnown INTEGER NOT NULL DEFAULT 1")
+                            db.execSQL("UPDATE master_foods SET nutritionKnown = 0 WHERE proteinGrams = 0 AND carbsGrams = 0 AND fatGrams = 0")
+                            db.execSQL("UPDATE master_foods SET barcode = NULL WHERE barcode IN ('890100100001','890100100002','890100100003','890100100004','890100100005','890100100006','890100100007','890100100008','890100100009','890100100010','890100100011','890100100012','890100100013') AND isCustom = 0 AND brand != 'Imported dataset'")
                         }
                     })
                     .build()

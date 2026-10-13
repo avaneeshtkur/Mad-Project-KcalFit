@@ -14,6 +14,9 @@ class UserPreferences(context: Context) {
         private const val KEY_IS_LOGGED_IN = "key_is_logged_in"
         private const val KEY_IS_ONBOARDED = "key_is_onboarded"
         private const val KEY_USER_EMAIL = "key_user_email"
+        private const val KEY_DARK_MODE = "key_dark_mode"
+        private const val KEY_REFRESH_TOKEN = "key_refresh_token"
+        private const val KEY_AUTH_USER_ID = "key_auth_user_id"
         const val DEFAULT_CALORIE_GOAL = 2000
     }
 
@@ -60,9 +63,18 @@ class UserPreferences(context: Context) {
     fun setUserEmail(email: String) {
         prefs.edit().putString(KEY_USER_EMAIL, email).apply()
     }
+    fun isDarkMode(): Boolean = prefs.getBoolean(KEY_DARK_MODE, false)
+    fun setDarkMode(enabled: Boolean) { prefs.edit().putBoolean(KEY_DARK_MODE, enabled).apply() }
+    fun getRefreshToken(): String = prefs.getString(KEY_REFRESH_TOKEN, "").orEmpty()
+    fun getAuthUserId(): String = prefs.getString(KEY_AUTH_USER_ID, "").orEmpty()
+    fun saveAuthSession(userId: String, refreshToken: String) {
+        prefs.edit().putString(KEY_AUTH_USER_ID, userId).putString(KEY_REFRESH_TOKEN, refreshToken).apply()
+    }
+    fun clearAuthSession() { prefs.edit().remove(KEY_AUTH_USER_ID).remove(KEY_REFRESH_TOKEN).apply() }
 
     // --- Clear Session (for logout) ---
     fun clearSession() {
+        clearAuthSession()
         prefs.edit()
             .remove(KEY_IS_LOGGED_IN)
             .remove(KEY_IS_ONBOARDED)

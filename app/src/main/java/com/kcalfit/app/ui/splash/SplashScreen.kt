@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,18 +26,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.kcalfit.app.data.model.UserEntity
 import com.kcalfit.app.ui.navigation.Screen
+import com.kcalfit.app.ui.components.CalFitLogo
 import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(
     userProfile: UserEntity?,
+    authReady: Boolean,
     onNavigateNext: (targetRoute: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scale = remember { Animatable(0.4f) }
     val alpha = remember { Animatable(0f) }
 
-    LaunchedEffect(key1 = true) {
+    LaunchedEffect(authReady, userProfile) {
+        if (!authReady) return@LaunchedEffect
         scale.animateTo(
             targetValue = 1.0f,
             animationSpec = tween(durationMillis = 800)
@@ -79,12 +81,7 @@ fun SplashScreen(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.FitnessCenter,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(56.dp)
-                )
+                CalFitLogo(size = 56.dp, showText = false)
             }
 
             Spacer(modifier = Modifier.height(20.dp))

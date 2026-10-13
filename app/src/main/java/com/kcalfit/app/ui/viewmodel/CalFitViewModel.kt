@@ -15,6 +15,8 @@ import com.kcalfit.app.data.model.RecipeEntity
 import com.kcalfit.app.data.model.UserEntity
 import com.kcalfit.app.data.model.WeightEntry
 import com.kcalfit.app.data.repository.FoodRepository
+import com.kcalfit.app.data.repository.SupabaseAuthService
+import com.kcalfit.app.CalFitApplication
 import com.kcalfit.app.domain.calculator.ActivityLevel
 import com.kcalfit.app.domain.calculator.BmrCalculator
 import com.kcalfit.app.domain.calculator.FitnessGoal
@@ -35,6 +37,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import org.json.JSONObject
 
 data class CalFitUiState(
     val selectedDate: String = getTodayDateString(),
@@ -92,8 +95,12 @@ class CalFitViewModel(
     private val _selectedMealTypeFilter = MutableStateFlow<String?>(null)
     val selectedMealTypeFilter: StateFlow<String?> = _selectedMealTypeFilter.asStateFlow()
 
-    private val _generatedVerificationCode = MutableStateFlow("")
-    val generatedVerificationCode: StateFlow<String> = _generatedVerificationCode.asStateFlow()
+    private val authService = SupabaseAuthService()
+    private val preferences get() = CalFitApplication.instance.userPreferences
+    private val _authReady = MutableStateFlow(false)
+    val authReady: StateFlow<Boolean> = _authReady.asStateFlow()
+    private val _pendingEmail = MutableStateFlow("")
+    val pendingEmail: StateFlow<String> = _pendingEmail.asStateFlow()
 
     // Database flows
     val userProfileFlow = repository.getUserProfileFlow()
@@ -113,6 +120,19 @@ class CalFitViewModel(
     init {
         viewModelScope.launch {
             repository.seedSampleDataIfNeeded()
+            val refreshToken = preferences.getRefreshToken()
+            if (refreshToken.isNotBlank()) {
+                try {
+                    val session = authService.refresh(refreshToken)
+                    acceptSession(session)
+                } catch (_: Exception) {
+                    preferences.clearAuthSession()
+                    repository.setLoggedIn(false)
+                }
+            } else {
+                repository.setLoggedIn(false)
+            }
+            _authReady.value = true
         }
     }
 
@@ -218,54 +238,86 @@ class CalFitViewModel(
     fun setMealTypeFilter(filter: String?) { _selectedMealTypeFilter.value = filter }
 
     // Auth & Verification
-    fun registerUser(name: String, email: String, password: String) {
+    fun registerUser(name: String, email: String, password: String, onResult: (String?) -> Unit) {
         viewModelScope.launch {
-            val code = (100000..999999).random().toString()
-            val user = UserEntity(
-                id = 1,
-                name = name,
-                email = email,
-                passwordHash = password.hashCode().toString(),
-                isLoggedIn = false,
-                isOnboarded = false,
-                isEmailVerified = false,
-                verificationCode = code,
-                verificationCodeTimestamp = System.currentTimeMillis()
-            )
-            repository.saveUserProfile(user)
-            _generatedVerificationCode.value = code
+            try {
+                authService.register(name, email, password)
+                _pendingEmail.value = email
+                preferences.setUserEmail(email)
+                onResult(null)
+            } catch (e: Exception) { onResult(e.message ?: "Could not create account") }
         }
     }
 
-    fun verifyEmailCode(inputCode: String): Boolean {
-        return inputCode == _generatedVerificationCode.value || inputCode == "123456"
-    }
-
-    fun markEmailVerified() {
+    fun verifyEmailCode(inputCode: String, onResult: (String?) -> Unit) {
         viewModelScope.launch {
-            repository.setEmailVerified(true)
-            repository.setLoggedIn(true)
+            try {
+                val email = _pendingEmail.value.ifBlank { preferences.getUserEmail() }
+                if (email.isBlank()) throw IllegalStateException("Please register again to request a code.")
+                acceptSession(authService.verify(email, inputCode))
+                onResult(null)
+            } catch (e: Exception) { onResult(e.message ?: "Invalid or expired code") }
         }
     }
 
-    fun loginUser(email: String, password: String, onResult: (Boolean) -> Unit) {
+    fun loginUser(email: String, password: String, onResult: (String?, Boolean) -> Unit) {
         viewModelScope.launch {
-            val user = repository.getUserProfile()
-            if (user != null && user.email == email && user.passwordHash == password.hashCode().toString()) {
-                repository.setLoggedIn(true)
-                onResult(true)
-            } else {
-                onResult(false)
-            }
+            try {
+                val onboarded = acceptSession(authService.login(email, password))
+                onResult(null, onboarded)
+            } catch (e: Exception) { onResult(e.message ?: "Could not log in", false) }
         }
     }
 
-    fun resendVerificationCode() {
+    fun resendVerificationCode(onResult: (String?) -> Unit) {
         viewModelScope.launch {
-            val code = (100000..999999).random().toString()
-            _generatedVerificationCode.value = code
-            repository.setVerificationCode(code)
+            try {
+                authService.resend(_pendingEmail.value.ifBlank { preferences.getUserEmail() })
+                onResult(null)
+            } catch (e: Exception) { onResult(e.message ?: "Could not resend code") }
         }
+    }
+
+    fun requestPasswordReset(email: String, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            try { authService.requestPasswordReset(email); onResult(null) }
+            catch (e: Exception) { onResult(e.message ?: "Could not send reset email") }
+        }
+    }
+
+    private suspend fun acceptSession(session: SupabaseAuthService.Session): Boolean {
+        val previous = repository.getUserProfile()
+        if (previous != null && previous.firebaseUid != session.userId) {
+            // One local profile/log at a time: never show another account's entries.
+            CalFitApplication.instance.database.clearAllTables()
+            repository.seedSampleDataIfNeeded()
+        }
+        val current = repository.getUserProfile()
+        val remote = session.metadata
+        val updated = (current ?: UserEntity()).copy(
+            name = session.name.ifBlank { current?.name ?: "Fitness User" },
+            email = session.email,
+            passwordHash = "",
+            firebaseUid = session.userId,
+            isEmailVerified = true,
+            isLoggedIn = true,
+            verificationCode = "",
+            verificationCodeTimestamp = 0,
+            isOnboarded = current?.isOnboarded ?: remote.optBoolean("is_onboarded", false),
+            age = current?.age ?: remote.optInt("age", 25),
+            sex = current?.sex ?: remote.optString("sex", "MALE"),
+            heightCm = current?.heightCm ?: remote.optDouble("height_cm", 175.0),
+            weightKg = current?.weightKg ?: remote.optDouble("weight_kg", 70.0),
+            targetWeightKg = current?.targetWeightKg ?: remote.optDouble("target_weight_kg", 65.0),
+            activityLevel = current?.activityLevel ?: remote.optString("activity_level", "MODERATELY_ACTIVE"),
+            fitnessGoal = current?.fitnessGoal ?: remote.optString("fitness_goal", "LOSE_WEIGHT"),
+            exerciseDaysPerWeek = current?.exerciseDaysPerWeek ?: remote.optInt("exercise_days_per_week", 3),
+            dailyCalorieGoal = current?.dailyCalorieGoal ?: remote.optInt("daily_calorie_goal", 2000)
+        )
+        repository.saveUserProfile(updated)
+        preferences.saveAuthSession(session.userId, session.refreshToken)
+        preferences.setUserEmail(session.email)
+        return updated.isOnboarded
     }
 
     fun updateCalorieGoal(newGoal: Int) {
@@ -290,8 +342,8 @@ class CalFitViewModel(
             val calc = BmrCalculator.computeFullProfile(weightKg, heightCm, age, sex, activity, goal)
             val macros = MacroCalculator.calculateMacros(calc.dailyCalorieTarget)
 
-            val updatedUser = UserEntity(
-                id = 1,
+            val existing = repository.getUserProfile() ?: return@launch
+            val updatedUser = existing.copy(
                 name = name,
                 isLoggedIn = true,
                 isOnboarded = true,
@@ -312,6 +364,26 @@ class CalFitViewModel(
             repository.saveUserProfile(updatedUser)
             repository.setCalorieGoal(calc.dailyCalorieTarget)
             _onboardingResult.value = calc
+            try {
+                authService.updateProfile(
+                    preferences.getRefreshToken(),
+                    JSONObject()
+                        .put("name", name)
+                        .put("is_onboarded", true)
+                        .put("age", age)
+                        .put("sex", sex.name)
+                        .put("height_cm", heightCm)
+                        .put("weight_kg", weightKg)
+                        .put("target_weight_kg", targetWeightKg)
+                        .put("activity_level", activity.name)
+                        .put("fitness_goal", goal.name)
+                        .put("exercise_days_per_week", exerciseDaysPerWeek)
+                        .put("daily_calorie_goal", calc.dailyCalorieTarget),
+                    onRefreshed = { preferences.saveAuthSession(it.userId, it.refreshToken) }
+                )
+            } catch (_: Exception) {
+                // Local onboarding remains usable offline; sync can retry on the next edit.
+            }
         }
     }
 
@@ -333,6 +405,9 @@ class CalFitViewModel(
         protein: Double = 0.0,
         carbs: Double = 0.0,
         fat: Double = 0.0,
+        fiber: Double = 0.0,
+        sugar: Double = 0.0,
+        sodium: Double = 0.0,
         quantity: String = "1 serving",
         date: String
     ) {
@@ -346,6 +421,9 @@ class CalFitViewModel(
                     proteinGrams = protein,
                     carbsGrams = carbs,
                     fatGrams = fat,
+                    fiberGrams = fiber,
+                    sugarGrams = sugar,
+                    sodiumMg = sodium,
                     quantity = quantity.ifBlank { "1 serving" },
                     date = date
                 )
@@ -428,6 +506,7 @@ class CalFitViewModel(
     }
 
     fun logout() {
+        preferences.clearSession()
         viewModelScope.launch { repository.setLoggedIn(false) }
     }
 }

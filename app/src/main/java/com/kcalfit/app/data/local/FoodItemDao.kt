@@ -22,6 +22,9 @@ interface FoodItemDao {
     @Query("SELECT * FROM master_foods WHERE barcode = :barcode LIMIT 1")
     suspend fun findByBarcode(barcode: String): FoodItemEntity?
 
+    @Query("SELECT * FROM master_foods WHERE name = :name AND brand = :brand LIMIT 1")
+    suspend fun findByNameAndBrand(name: String, brand: String): FoodItemEntity?
+
     @Query("SELECT * FROM master_foods WHERE isFavorite = 1")
     fun getFavoriteFoods(): Flow<List<FoodItemEntity>>
 

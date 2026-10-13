@@ -1,69 +1,45 @@
 package com.kcalfit.app.ui.navigation
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Text
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.kcalfit.app.ui.nakafit.Naka
 
 @Composable
-fun BottomNavigationBar(
-    navController: NavController,
-    modifier: Modifier = Modifier
-) {
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-
-    NavigationBar(
-        modifier = modifier.shadow(8.dp),
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 6.dp
+fun BottomNavigationBar(navController: NavController, modifier: Modifier = Modifier) {
+    val entry by navController.currentBackStackEntryAsState()
+    val route = entry?.destination?.route
+    Box(
+        modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(top = 8.dp, bottom = 8.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Screen.bottomNavItems.forEach { screen ->
-            val isSelected = currentRoute == screen.route
-
-            NavigationBarItem(
-                selected = isSelected,
-                onClick = {
-                    if (currentRoute != screen.route) {
-                        navController.navigate(screen.route) {
-                            popUpTo(Screen.Home.route) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
+        Row(Modifier.widthIn(max = 300.dp).background(Naka.Ink, RoundedCornerShape(40.dp)).padding(7.dp),
+            horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            Screen.bottomNavItems.forEach { screen ->
+                IconButton(onClick = {
+                    if (route != screen.route) navController.navigate(screen.route) {
+                        popUpTo(Screen.Home.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
                     }
-                },
-                icon = {
-                    Icon(
-                        imageVector = screen.icon,
-                        contentDescription = screen.title
-                    )
-                },
-                label = {
-                    Text(
-                        text = screen.title,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                    )
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                )
-            )
+                }, modifier = Modifier.size(48.dp).background(if (route == screen.route) Naka.Violet else Color.Transparent, CircleShape)) {
+                    Icon(screen.icon, screen.title, Modifier.size(22.dp), tint = if (route == screen.route) Color.White else Naka.Muted)
+                }
+            }
         }
     }
 }

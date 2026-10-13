@@ -42,7 +42,7 @@ fun OnboardingScreen(initialName: String = "Fitness User",
         Text("${step + 1} of 7", color = Naka.Muted, fontSize = 12.sp)
         AnimatedContent(step, label = "onboarding steps") { selectedStep ->
             Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                Text(titles[selectedStep], fontSize = 29.sp, lineHeight = 35.sp, color = Naka.Ink)
+                Text(titles[selectedStep], fontSize = 29.sp, lineHeight = 35.sp, color = MaterialTheme.colorScheme.onSurface)
                 when (selectedStep) {
                     0 -> {
                         NakaPhoto(R.drawable.nakafit_runner, "Runner on a track", Modifier.fillMaxWidth().height(330.dp).clip(RoundedCornerShape(26.dp)))
@@ -52,7 +52,7 @@ fun OnboardingScreen(initialName: String = "Fitness User",
                         Surface(Modifier.fillMaxWidth().clickable { goal = item.name }, shape = RoundedCornerShape(24.dp),
                             color = if (goal == item.name) Naka.Lavender else Naka.Pale,
                             border = if (goal == item.name) BorderStroke(1.dp, Naka.Violet) else null) {
-                            Text(item.displayName, Modifier.padding(22.dp), color = Naka.Ink)
+                            Text(item.displayName, Modifier.padding(22.dp), color = if (goal == item.name) Naka.Ink else MaterialTheme.colorScheme.onSurface)
                         }
                     }
                     2 -> {
@@ -66,29 +66,29 @@ fun OnboardingScreen(initialName: String = "Fitness User",
                     }
                     3 -> {
                         Spacer(Modifier.height(60.dp))
-                        Text("${height.toInt()}", Modifier.align(Alignment.CenterHorizontally), fontSize = 58.sp, color = Naka.Ink)
+                        Text("${height.toInt()}", Modifier.align(Alignment.CenterHorizontally), fontSize = 58.sp, color = MaterialTheme.colorScheme.onSurface)
                         Text("centimeters", Modifier.align(Alignment.CenterHorizontally), color = Naka.Violet)
                         Slider(height, { height = it }, valueRange = 100f..230f, steps = 129)
                         Text("Log and monitor your daily health data.", color = Naka.Muted)
                     }
                     4 -> {
-                        Text("${"%.1f".format(weight)} kg", Modifier.align(Alignment.CenterHorizontally), fontSize = 44.sp, color = Naka.Ink)
+                        Text("${"%.1f".format(weight)} kg", Modifier.align(Alignment.CenterHorizontally), fontSize = 44.sp, color = MaterialTheme.colorScheme.onSurface)
                         Slider(weight, { weight = it }, valueRange = 30f..200f)
                         Text("Target weight", color = Naka.Muted)
-                        Text("${"%.1f".format(target)} kg", fontSize = 28.sp, color = Naka.Ink)
+                        Text("${"%.1f".format(target)} kg", fontSize = 28.sp, color = MaterialTheme.colorScheme.onSurface)
                         Slider(target, { target = it }, valueRange = 30f..200f)
                     }
                     5 -> {
                         ActivityLevel.entries.forEach { item -> FilterChip(activity == item.name, { activity = item.name },
                             label = { Text(item.displayName) }, modifier = Modifier.fillMaxWidth()) }
-                        Text("Exercise days per week", color = Naka.Ink)
+                        Text("Exercise days per week", color = MaterialTheme.colorScheme.onSurface)
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             (1..7).forEach { day -> FilterChip(days == day, { days = day }, label = { Text("$day") }, modifier = Modifier.weight(1f)) }
                         }
                     }
                     6 -> {
                         NakaPhoto(R.drawable.nakafit_meditation, "Mindful recovery by the lake", Modifier.fillMaxWidth().height(250.dp).clip(RoundedCornerShape(24.dp)))
-                        Text("Your plan starts with ${days} active days each week.", fontSize = 22.sp, color = Naka.Ink)
+                        Text("Your plan starts with ${days} active days each week.", fontSize = 22.sp, color = MaterialTheme.colorScheme.onSurface)
                         Text("${height.toInt()} cm · ${"%.1f".format(weight)} kg · Target ${"%.1f".format(target)} kg", color = Naka.Muted)
                     }
                 }

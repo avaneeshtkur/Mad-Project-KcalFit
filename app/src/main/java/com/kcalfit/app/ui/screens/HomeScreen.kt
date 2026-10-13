@@ -1,167 +1,134 @@
 package com.kcalfit.app.ui.screens
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Brightness4
-import androidx.compose.material.icons.filled.Brightness7
-import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.kcalfit.app.R
 import com.kcalfit.app.data.model.FoodEntry
 import com.kcalfit.app.data.model.MealType
-import com.kcalfit.app.ui.components.CalFitLogo
 import com.kcalfit.app.ui.components.CalorieGoalDialog
-import com.kcalfit.app.ui.components.CalorieProgressCard
+import com.kcalfit.app.ui.nakafit.*
 import com.kcalfit.app.ui.viewmodel.CalFitUiState
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @Composable
-fun HomeScreen(
-    uiState: CalFitUiState,
-    onAddFoodClick: (MealType?) -> Unit,
-    onDeleteEntry: (FoodEntry) -> Unit,
-    onUpdateGoal: (Int) -> Unit,
-    darkMode: Boolean,
-    onDarkModeChange: (Boolean) -> Unit,
-    onOpenExercise: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var showGoalDialog by remember { mutableStateOf(false) }
-    if (showGoalDialog) CalorieGoalDialog(
-        currentGoal = uiState.dailyGoal,
-        onDismiss = { showGoalDialog = false },
-        onConfirm = { onUpdateGoal(it); showGoalDialog = false }
-    )
-    val date = remember { SimpleDateFormat("EEEE, MMM d", Locale.getDefault()).format(Date()) }
-    val meals = MealType.entries
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 30.dp),
-        verticalArrangement = Arrangement.spacedBy(22.dp)
-    ) {
+fun HomeScreen(uiState: CalFitUiState, onAddFoodClick: (MealType?) -> Unit, onDeleteEntry: (FoodEntry) -> Unit,
+    onUpdateGoal: (Int) -> Unit, darkMode: Boolean, onDarkModeChange: (Boolean) -> Unit,
+    onOpenExercise: () -> Unit, onOpenBreakfast: () -> Unit = {}, onOpenGoals: () -> Unit = {},
+    onOpenProfile: () -> Unit = {}, onOpenTrack: () -> Unit = {}, onOpenNotifications: () -> Unit = {},
+    onWorkout: (String) -> Unit = {}, demo: Boolean = false, modifier: Modifier = Modifier) {
+    var editGoal by remember { mutableStateOf(false) }
+    if (editGoal) CalorieGoalDialog(uiState.dailyGoal, { editGoal = false }, { onUpdateGoal(it); editGoal = false })
+    val calorieGoal = uiState.dailyGoal.coerceAtLeast(1)
+    val calorieTotal = uiState.totalCalories.coerceAtLeast(0)
+    val calorieProgress = (calorieTotal.toFloat() / calorieGoal).coerceIn(0f, 1f)
+    LazyColumn(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+        contentPadding = PaddingValues(16.dp, 20.dp, 16.dp, 30.dp), verticalArrangement = Arrangement.spacedBy(22.dp)) {
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                CalFitLogo(size = 34.dp)
-                Spacer(Modifier.weight(1f))
-                IconButton(onClick = { onDarkModeChange(!darkMode) }) {
-                    Icon(if (darkMode) Icons.Default.Brightness7 else Icons.Default.Brightness4,
-                        if (darkMode) "Use light mode" else "Use dark mode")
+                Surface(Modifier.size(48.dp).clickable(onClick = onOpenProfile), shape = CircleShape, color = Naka.Lavender) {
+                    Box(contentAlignment = Alignment.Center) { Text(if (demo) "AS" else uiState.userProfile?.name?.take(1)?.uppercase() ?: "N",
+                        color = Naka.Violet, fontSize = 18.sp) }
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Good Morning", fontSize = 12.sp, color = Naka.Muted)
+                    Text(if (demo) "Anna Santos" else uiState.userProfile?.name ?: "Fitness User", fontSize = 16.sp, color = MaterialTheme.colorScheme.onBackground)
+                }
+                IconButton(onOpenNotifications, Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)) {
+                    Icon(Icons.Default.NotificationsNone, "Notifications", tint = MaterialTheme.colorScheme.onSurface)
                 }
             }
-            Spacer(Modifier.height(15.dp))
-            Text("Today’s overview", style = MaterialTheme.typography.headlineMedium)
-            Text(date, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (demo) Text("Demo preview", Modifier.padding(top = 8.dp), color = Naka.Muted, fontSize = 10.sp)
         }
         item {
-            CalorieProgressCard(
-                consumedCalories = uiState.totalCalories,
-                goalCalories = uiState.dailyGoal,
-                remainingCalories = uiState.remainingCalories,
-                isOverGoal = uiState.isOverGoal,
-                excessCalories = uiState.excessCalories,
-                onEditGoalClick = { showGoalDialog = true }
-            )
-        }
-        item {
-            Text("Meals breakdown", style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(10.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                meals.chunked(2).forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        row.forEach { meal ->
-                            val calories = uiState.mealBreakdown[meal.displayName] ?: 0
-                            Surface(
-                                modifier = Modifier.weight(1f).clickable { onAddFoodClick(meal) },
-                                shape = RoundedCornerShape(14.dp),
-                                color = MaterialTheme.colorScheme.surface
-                            ) {
-                                Column(Modifier.padding(13.dp)) {
-                                    Text(if (meal == MealType.SNACK) "Snacks" else meal.displayName,
-                                        style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text("$calories kcal", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
+            Surface(Modifier.fillMaxWidth().clickable(onClick = onOpenTrack), color = Naka.Ink, shape = RoundedCornerShape(24.dp)) {
+                Row(Modifier.padding(24.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Calorie Intake", color = Color.White, fontSize = 18.sp)
+                        Text("$calorieTotal / $calorieGoal kcal", color = Naka.Muted, fontSize = 13.sp)
+                    }
+                    Box(Modifier.size(75.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(progress = { calorieProgress }, Modifier.size(66.dp), color = Color.White,
+                            trackColor = Color(0xFF303036), strokeWidth = 5.dp)
+                        Text("${(calorieProgress * 100).toInt()}%", color = Color.White, fontSize = 13.sp)
                     }
                 }
             }
         }
         item {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("Today’s food log", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                TextButton(onClick = { onAddFoodClick(null) }) { Icon(Icons.Default.Add, null); Text("Quick add") }
-            }
-            Spacer(Modifier.height(6.dp))
-            Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                Column {
-                    meals.forEachIndexed { index, meal ->
-                        if (index > 0) HorizontalDivider(Modifier.padding(horizontal = 16.dp))
-                        val entries = uiState.selectedDateEntries.filter { MealType.fromString(it.mealType) == meal }
-                        Column(Modifier.padding(horizontal = 16.dp, vertical = 11.dp)) {
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                Text(if (meal == MealType.SNACK) "Snacks" else meal.displayName,
-                                    style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                                Text("${entries.sumOf { it.calories }} kcal", color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    style = MaterialTheme.typography.labelLarge)
-                            }
-                            if (entries.isEmpty()) {
-                                Text("No food logged", color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    style = MaterialTheme.typography.bodySmall)
-                            } else entries.forEach { entry ->
-                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                    Text(entry.foodName, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text("${entry.calories} kcal", style = MaterialTheme.typography.bodySmall)
-                                    IconButton(onClick = { onDeleteEntry(entry) }) {
-                                        Icon(Icons.Default.DeleteOutline, "Delete ${entry.foodName}", tint = MaterialTheme.colorScheme.error)
-                                    }
-                                }
-                            }
-                            TextButton(onClick = { onAddFoodClick(meal) }, contentPadding = PaddingValues(0.dp)) {
-                                Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
-                                Text("Add ${meal.displayName.lowercase()}")
-                            }
-                        }
-                    }
-                    HorizontalDivider(Modifier.padding(horizontal = 16.dp))
-                    Column {
-                        Row(Modifier.fillMaxWidth().clickable(onClick = onOpenExercise).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.FitnessCenter, null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text("Exercise", style = MaterialTheme.typography.titleMedium)
-                                Text(if (uiState.exerciseEntries.isEmpty()) "No exercise logged • Tap to add" else
-                                    "${uiState.exerciseEntries.size} sessions • ${uiState.caloriesBurned} kcal burned",
-                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            Icon(Icons.Default.Add, "Log exercise")
-                        }
-                        uiState.exerciseEntries.forEach { entry ->
-                            Row(Modifier.fillMaxWidth().padding(start = 50.dp, end = 16.dp, bottom = 10.dp)) {
-                                Text(entry.exerciseName, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text("−${entry.caloriesBurned} kcal", style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary)
-                            }
-                        }
-                    }
-                }
+            NakaSection("Health Overview", "See Details", onOpenTrack)
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                HomeMetric("Calories\nBurnt", if (demo) "1.4k" else "${uiState.caloriesBurned}", "kCal", Icons.Default.LocalFireDepartment, Modifier.weight(1f), onOpenTrack)
+                HomeMetric("Distance\nCovered", if (demo) "3.8" else "—", "km", Icons.Default.DirectionsRun, Modifier.weight(1f), onOpenTrack)
             }
         }
+        item {
+            NakaSection("Popular Exercise", "See Details", onOpenExercise)
+            Spacer(Modifier.height(8.dp))
+            HomeExercise("Squat Low,\nBuild Strength", "24 Exercise", Naka.Lavender, R.drawable.nakafit_strength, { onWorkout("strength") })
+            Spacer(Modifier.height(16.dp))
+            HomeExercise("Lift Weights,\nGet Stronger", "20 Exercise", Naka.Lime, R.drawable.nakafit_gym_sunset, { onWorkout("weights") })
+            Spacer(Modifier.height(16.dp))
+            HomeExercise("Morning Run", "30 minutes", Naka.Pink, R.drawable.nakafit_runner, { onWorkout("run") })
+        }
+        item {
+            NakaSection("Your Nutrition", "See Details", onOpenBreakfast)
+            NakaPhotoCard("Track Your Nutrition", "Monitor calories and macros", R.drawable.nakafit_food, onOpenBreakfast, height = 180)
+        }
+        item {
+            NakaSection("Daily Goals", "Add Goals", onOpenGoals)
+            NakaRow("Daily calorie target", "${uiState.totalCalories} / ${uiState.dailyGoal} kcal", { editGoal = true })
+            MealType.entries.forEach { meal -> NakaRow(meal.displayName, "${uiState.mealBreakdown[meal.displayName] ?: 0} kcal", { onAddFoodClick(meal) }) }
+        }
+    }
+}
+
+@Composable
+private fun HomeMetric(title: String, value: String, unit: String, icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier, onClick: () -> Unit) {
+    Surface(modifier.clickable(onClick = onClick), shape = RoundedCornerShape(23.dp), color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)) {
+        Column(Modifier.padding(15.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                Text(title, Modifier.weight(1f), fontSize = 15.sp, lineHeight = 18.sp, color = MaterialTheme.colorScheme.onSurface)
+                Icon(icon, null, Modifier.size(24.dp), tint = Naka.Violet)
+            }
+            Spacer(Modifier.height(17.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(value, fontSize = 23.sp, color = MaterialTheme.colorScheme.onSurface)
+                Text(" $unit", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeExercise(title: String, subtitle: String, color: Color, image: Int, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().height(176.dp).clip(RoundedCornerShape(24.dp)).background(color).clickable(onClick = onClick)) {
+        Column(Modifier.weight(.58f).fillMaxHeight().padding(start = 20.dp, end = 8.dp, top = 18.dp, bottom = 16.dp), verticalArrangement = Arrangement.Center) {
+            Text(title, color = Naka.Ink, fontSize = 20.sp, lineHeight = 24.sp, maxLines = 2)
+            Text(subtitle, color = Naka.Ink, fontSize = 12.sp, maxLines = 1)
+            Spacer(Modifier.height(14.dp))
+            Button(onClick = onClick, modifier = Modifier.widthIn(min = 104.dp).height(36.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                shape = RoundedCornerShape(20.dp), colors = ButtonDefaults.buttonColors(containerColor = Naka.Ink, contentColor = Color.White)) {
+                Text("Start Now", fontSize = 11.sp, maxLines = 1)
+            }
+        }
+        NakaPhoto(image, title.replace("\n", " "), Modifier.weight(.42f).fillMaxHeight())
     }
 }

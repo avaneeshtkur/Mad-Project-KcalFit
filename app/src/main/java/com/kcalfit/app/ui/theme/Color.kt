@@ -1,36 +1,6 @@
 package com.kcalfit.app.ui.theme
-
 import androidx.compose.ui.graphics.Color
-
-// Light Theme Colors
-val GreenPrimary = Color(0xFF10B981)
-val GreenOnPrimary = Color(0xFFFFFFFF)
-val GreenContainer = Color(0xFFD1FAE5)
-val GreenOnContainer = Color(0xFF065F46)
-
-val TealSecondary = Color(0xFF14B8A6)
-val TealContainer = Color(0xFFCCFBF1)
-val TealOnContainer = Color(0xFF115E59)
-
-val CoralAccent = Color(0xFFF43F5E)
-val WarningYellow = Color(0xFFF59E0B)
-
-val BackgroundLight = Color(0xFFF8FAFC)
-val SurfaceLight = Color(0xFFFFFFFF)
-val SurfaceVariantLight = Color(0xFFF1F5F9)
-
-// Meal Type Specific Colors
-val BreakfastColor = Color(0xFFF59E0B) // Amber
-val LunchColor = Color(0xFF10B981)     // Green
-val DinnerColor = Color(0xFF6366F1)    // Indigo
-val SnackColor = Color(0xFFEC4899)     // Pink
-
-// Dark Theme Colors
-val GreenPrimaryDark = Color(0xFF34D399)
-val GreenOnPrimaryDark = Color(0xFF003822)
-val GreenContainerDark = Color(0xFF064E3B)
-val GreenOnContainerDark = Color(0xFFA7F3D0)
-
-val BackgroundDark = Color(0xFF0F172A)
-val SurfaceDark = Color(0xFF1E293B)
-val SurfaceVariantDark = Color(0xFF334155)
+val LightPrimary=Color(0xFF00897B); val LightOnPrimary=Color.White; val LightPrimaryContainer=Color(0xFFB2DFDB); val LightOnPrimaryContainer=Color(0xFF00332E); val LightSecondary=Color(0xFF5C6BC0); val LightSecondaryContainer=Color(0xFFE8EAF6); val LightOnSecondaryContainer=Color(0xFF1A237E); val LightTertiary=Color(0xFFF4511E); val LightTertiaryContainer=Color(0xFFFFCCBC); val LightBackground=Color(0xFFF5F7FA); val LightSurface=Color.White; val LightSurfaceVariant=Color(0xFFECEFF1); val LightOnSurface=Color(0xFF1B1B1F); val LightOnSurfaceVariant=Color(0xFF6B7280); val LightOutline=Color(0xFFD1D5DB); val LightError=Color(0xFFD32F2F)
+val DarkPrimary=Color(0xFF4DB6AC); val DarkOnPrimary=Color(0xFF00332E); val DarkPrimaryContainer=Color(0xFF004D40); val DarkOnPrimaryContainer=Color(0xFFB2DFDB); val DarkSecondary=Color(0xFF9FA8DA); val DarkSecondaryContainer=Color(0xFF303F9F); val DarkOnSecondaryContainer=Color(0xFFE8EAF6); val DarkTertiary=Color(0xFFFF8A65); val DarkTertiaryContainer=Color(0xFFBF360C); val DarkBackground=Color(0xFF0F1419); val DarkSurface=Color(0xFF1A1F2E); val DarkSurfaceVariant=Color(0xFF252D3A); val DarkOnSurface=Color(0xFFE8EAED); val DarkOnSurfaceVariant=Color(0xFF9CA3AF); val DarkOutline=Color(0xFF374151); val DarkError=Color(0xFFEF5350)
+val BreakfastColor=Color(0xFFFFA726); val LunchColor=Color(0xFF66BB6A); val DinnerColor=Color(0xFF7E57C2); val SnackColor=Color(0xFFEC407A); val CalorieGreen=Color(0xFF4CAF50); val WaterBlue=Color(0xFF29B6F6); val ExerciseOrange=Color(0xFFFF7043); val ProteinPurple=Color(0xFFAB47BC); val CarbsAmber=Color(0xFFFFA000); val FatRose=Color(0xFFEC407A); val GradientTealStart=Color(0xFF00897B); val GradientTealEnd=Color(0xFF4DB6AC); val GradientOrangeStart=Color(0xFFF4511E); val GradientOrangeEnd=Color(0xFFFF8A65)
+val GreenPrimary=LightPrimary; val CoralAccent=LightTertiary; val WarningYellow=Color(0xFFFFC107)

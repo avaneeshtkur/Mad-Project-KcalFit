@@ -33,20 +33,27 @@ import com.kcalfit.app.ui.screens.NutritionScreen
 import com.kcalfit.app.ui.splash.SplashScreen
 import com.kcalfit.app.ui.viewmodel.CalFitViewModel
 import com.kcalfit.app.ui.water.WaterScreen
+import com.kcalfit.app.ui.onboarding.CalorieSuggestionScreen
+import com.kcalfit.app.ui.workout.WorkoutPlanScreen
+import com.kcalfit.app.ui.chatbot.ChatbotScreen
+import com.kcalfit.app.ui.profile.ProfileScreen
+import com.kcalfit.app.ui.weight.WeightScreen
 
 @Composable
 fun NavGraph(
     navController: NavHostController,
     viewModel: CalFitViewModel,
     userPreferences: UserPreferences,
-    authViewModel: Any? = null,
-    onboardingViewModel: Any? = null,
+    darkMode: Boolean = false,
+    onDarkModeChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val generatedCode by viewModel.generatedVerificationCode.collectAsState()
+    val authReady by viewModel.authReady.collectAsState()
+    val pendingEmail by viewModel.pendingEmail.collectAsState()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    var addFoodMeal by remember { mutableStateOf(com.kcalfit.app.data.model.MealType.BREAKFAST) }
 
     val bottomNavRoutes = Screen.bottomNavItems.map { it.route }
     val showBottomBar = currentRoute in bottomNavRoutes
@@ -69,6 +76,7 @@ fun NavGraph(
             composable(Screen.Splash.route) {
                 SplashScreen(
                     userProfile = uiState.userProfile,
+                    authReady = authReady,
                     onNavigateNext = { targetRoute ->
                         navController.navigate(targetRoute) {
                             popUpTo(Screen.Splash.route) { inclusive = true }
@@ -91,16 +99,20 @@ fun NavGraph(
 
             composable(Screen.Login.route) {
                 var loginError by remember { mutableStateOf<String?>(null) }
+                var loginLoading by remember { mutableStateOf(false) }
                 LoginScreen(
                     onLoginSuccess = { email, password ->
-                        viewModel.loginUser(email, password) { success ->
-                            if (success) {
-                                val target = if (uiState.userProfile?.isOnboarded == true) Screen.Home.route else Screen.Onboarding.route
+                        loginLoading = true
+                        loginError = null
+                        viewModel.loginUser(email, password) { error, onboarded ->
+                            loginLoading = false
+                            if (error == null) {
+                                val target = if (onboarded) Screen.Home.route else Screen.Onboarding.route
                                 navController.navigate(target) {
                                     popUpTo(Screen.Welcome.route) { inclusive = true }
                                 }
                             } else {
-                                loginError = "Invalid email or password"
+                                loginError = error
                             }
                         }
                     },
@@ -112,40 +124,44 @@ fun NavGraph(
                     onNavigateToForgotPassword = {
                         navController.navigate(Screen.ForgotPassword.route)
                     },
-                    errorMessage = loginError
+                    errorMessage = loginError,
+                    isLoading = loginLoading
                 )
             }
 
             composable(Screen.Register.route) {
+                var registerError by remember { mutableStateOf<String?>(null) }
+                var registerLoading by remember { mutableStateOf(false) }
                 RegisterScreen(
                     onRegisterSuccess = { name, email, password ->
-                        viewModel.registerUser(name, email, password)
-                        navController.navigate(Screen.EmailVerification.route)
+                        registerLoading = true
+                        registerError = null
+                        viewModel.registerUser(name, email, password) { error ->
+                            registerLoading = false
+                            if (error == null) navController.navigate(Screen.EmailVerification.route)
+                            else registerError = error
+                        }
                     },
                     onNavigateToLogin = {
                         navController.navigate(Screen.Login.route) {
                             popUpTo(Screen.Register.route) { inclusive = true }
                         }
-                    }
+                    },
+                    errorMessage = registerError,
+                    isLoading = registerLoading
                 )
             }
 
             composable(Screen.EmailVerification.route) {
                 EmailVerificationScreen(
-                    email = uiState.userProfile?.email ?: "your email",
-                    generatedCode = generatedCode,
-                    onVerifyCode = { code ->
-                        viewModel.verifyEmailCode(code)
-                    },
+                    email = pendingEmail.ifBlank { userPreferences.getUserEmail() },
+                    onVerifyCode = { code, result -> viewModel.verifyEmailCode(code, result) },
                     onSuccess = {
-                        viewModel.markEmailVerified()
                         navController.navigate(Screen.Onboarding.route) {
                             popUpTo(Screen.Welcome.route) { inclusive = true }
                         }
                     },
-                    onResendCode = {
-                        viewModel.resendVerificationCode()
-                    },
+                    onResendCode = { result -> viewModel.resendVerificationCode(result) },
                     onNavigateToLogin = {
                         navController.navigate(Screen.Login.route) {
                             popUpTo(Screen.Welcome.route) { inclusive = true }
@@ -156,6 +172,7 @@ fun NavGraph(
 
             composable(Screen.ForgotPassword.route) {
                 ForgotPasswordScreen(
+                    onRequestReset = { email, result -> viewModel.requestPasswordReset(email, result) },
                     onNavigateBackToLogin = {
                         navController.popBackStack()
                     }
@@ -166,13 +183,11 @@ fun NavGraph(
             composable(Screen.Onboarding.route) {
                 OnboardingScreen(
                     initialName = uiState.userProfile?.name ?: "Fitness User",
-                    onOnboardingCompleted = { name, age, sex, heightCm, weightKg, targetWeightKg, activityLevel, goal ->
+                    onOnboardingCompleted = { name, age, sex, heightCm, weightKg, targetWeightKg, activityLevel, goal, exerciseDays ->
                         viewModel.completeOnboarding(
-                            name, age, sex, heightCm, weightKg, targetWeightKg, activityLevel, goal
+                            name, age, sex, heightCm, weightKg, targetWeightKg, activityLevel, goal, exerciseDays
                         )
-                        navController.navigate(Screen.Home.route) {
-                            popUpTo(0) { inclusive = true }
-                        }
+                        navController.navigate(Screen.CalorieSuggestion.route)
                     }
                 )
             }
@@ -181,7 +196,8 @@ fun NavGraph(
             composable(Screen.Home.route) {
                 HomeScreen(
                     uiState = uiState,
-                    onAddFoodClick = {
+                    onAddFoodClick = { meal ->
+                        addFoodMeal = meal ?: com.kcalfit.app.data.model.MealType.BREAKFAST
                         navController.navigate(Screen.AddFood.route)
                     },
                     onDeleteEntry = { entry ->
@@ -190,10 +206,9 @@ fun NavGraph(
                     onUpdateGoal = { newGoal ->
                         viewModel.updateCalorieGoal(newGoal)
                     },
-                    onMealCategoryClick = { meal ->
-                        viewModel.setMealTypeFilter(meal.displayName)
-                        navController.navigate(Screen.Nutrition.route)
-                    }
+                    darkMode = darkMode,
+                    onDarkModeChange = onDarkModeChange,
+                    onOpenExercise = { navController.navigate(Screen.Exercise.route) }
                 )
             }
 
@@ -221,25 +236,39 @@ fun NavGraph(
             }
 
             composable(Screen.Chatbot.route) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Coach / Chatbot Screen", style = MaterialTheme.typography.titleLarge)
-                }
+                ChatbotScreen(uiState = uiState, onSendMessage = viewModel::sendCoachQuery)
             }
 
             composable(Screen.Profile.route) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Profile Screen", style = MaterialTheme.typography.titleLarge)
-                }
+                ProfileScreen(
+                    uiState = uiState,
+                    onNavigateToWeight = { navController.navigate(Screen.Weight.route) },
+                    onNavigateToWorkoutPlan = { viewModel.generateWorkoutPlan(); navController.navigate(Screen.WorkoutPlan.route) },
+                    onNavigateToHistory = { navController.navigate(Screen.History.route) },
+                    onUpdateGoal = viewModel::updateCalorieGoal,
+                    onLogout = { viewModel.logout(); navController.navigate(Screen.Welcome.route) { popUpTo(0) { inclusive = true } } },
+                    darkMode = darkMode,
+                    onDarkModeChange = onDarkModeChange
+                )
             }
 
             // --- Secondary Screens ---
             composable(Screen.AddFood.route) {
                 AddFoodScreen(
-                    onAddFoodSubmit = { foodName, mealType, calories, quantity, date ->
+                    initialMealType = addFoodMeal,
+                    searchResults = uiState.masterFoodSearchResults,
+                    onSearchQueryChange = viewModel::setSearchQuery,
+                    onAddFoodSubmit = { foodName, mealType, calories, protein, carbs, fat, fiber, sugar, sodium, quantity, date ->
                         viewModel.addFoodEntry(
                             foodName = foodName,
                             mealType = mealType,
                             calories = calories,
+                            protein = protein,
+                            carbs = carbs,
+                            fat = fat,
+                            fiber = fiber,
+                            sugar = sugar,
+                            sodium = sodium,
                             quantity = quantity,
                             date = date
                         )
@@ -282,21 +311,16 @@ fun NavGraph(
             }
 
             composable(Screen.Weight.route) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Weight Log Screen", style = MaterialTheme.typography.titleLarge)
-                }
+                WeightScreen(uiState = uiState, onLogWeight = { viewModel.logWeight(it) }, onNavigateBack = { navController.popBackStack() })
             }
 
             composable(Screen.CalorieSuggestion.route) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Calorie Goal Suggestion Screen", style = MaterialTheme.typography.titleLarge)
-                }
+                val result by viewModel.onboardingResult.collectAsState()
+                result?.let { calc -> CalorieSuggestionScreen(calc.bmr, calc.tdee, calc.dailyCalorieTarget, uiState.targetProteinGrams, uiState.targetCarbsGrams, uiState.targetFatGrams, uiState.userProfile, viewModel::updateCalorieGoal, { viewModel.generateWorkoutPlan(); navController.navigate(Screen.WorkoutPlan.route) }, { navController.navigate(Screen.Home.route) }) }
             }
 
             composable(Screen.WorkoutPlan.route) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Workout Plan Screen", style = MaterialTheme.typography.titleLarge)
-                }
+                val plan by viewModel.workoutPlan.collectAsState(); WorkoutPlanScreen(plan, uiState.userProfile?.fitnessGoal ?: "LOSE_WEIGHT", uiState.userProfile?.exerciseDaysPerWeek ?: 3, { navController.navigate(Screen.Home.route) }, viewModel::generateWorkoutPlan)
             }
         }
     }

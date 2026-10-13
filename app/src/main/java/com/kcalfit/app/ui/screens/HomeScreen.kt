@@ -1,36 +1,17 @@
 package com.kcalfit.app.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Fastfood
+import androidx.compose.material.icons.filled.Brightness4
+import androidx.compose.material.icons.filled.Brightness7
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,255 +20,147 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kcalfit.app.data.model.FoodEntry
 import com.kcalfit.app.data.model.MealType
+import com.kcalfit.app.ui.components.CalFitLogo
 import com.kcalfit.app.ui.components.CalorieGoalDialog
 import com.kcalfit.app.ui.components.CalorieProgressCard
-import com.kcalfit.app.ui.components.FoodEntryItem
-import com.kcalfit.app.ui.components.MealSummaryCard
 import com.kcalfit.app.ui.viewmodel.CalFitUiState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     uiState: CalFitUiState,
-    onAddFoodClick: () -> Unit,
+    onAddFoodClick: (MealType?) -> Unit,
     onDeleteEntry: (FoodEntry) -> Unit,
     onUpdateGoal: (Int) -> Unit,
-    onMealCategoryClick: (MealType) -> Unit,
+    darkMode: Boolean,
+    onDarkModeChange: (Boolean) -> Unit,
+    onOpenExercise: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showGoalDialog by remember { mutableStateOf(false) }
-
-    val todayFormatted = remember {
-        val dateFormat = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault())
-        dateFormat.format(Date())
-    }
-
-    if (showGoalDialog) {
-        CalorieGoalDialog(
-            currentGoal = uiState.dailyGoal,
-            onDismiss = { showGoalDialog = false },
-            onConfirm = { newGoal ->
-                onUpdateGoal(newGoal)
-                showGoalDialog = false
+    if (showGoalDialog) CalorieGoalDialog(
+        currentGoal = uiState.dailyGoal,
+        onDismiss = { showGoalDialog = false },
+        onConfirm = { onUpdateGoal(it); showGoalDialog = false }
+    )
+    val date = remember { SimpleDateFormat("EEEE, MMM d", Locale.getDefault()).format(Date()) }
+    val meals = MealType.entries
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 30.dp),
+        verticalArrangement = Arrangement.spacedBy(22.dp)
+    ) {
+        item {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                CalFitLogo(size = 34.dp)
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = { onDarkModeChange(!darkMode) }) {
+                    Icon(if (darkMode) Icons.Default.Brightness7 else Icons.Default.Brightness4,
+                        if (darkMode) "Use light mode" else "Use dark mode")
+                }
             }
-        )
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.FitnessCenter,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.size(8.dp))
-                            Text(
-                                text = "Cal Fit",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                        }
-                        Text(
-                            text = todayFormatted,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showGoalDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Settings",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+            Spacer(Modifier.height(15.dp))
+            Text("Today’s overview", style = MaterialTheme.typography.headlineMedium)
+            Text(date, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        item {
+            CalorieProgressCard(
+                consumedCalories = uiState.totalCalories,
+                goalCalories = uiState.dailyGoal,
+                remainingCalories = uiState.remainingCalories,
+                isOverGoal = uiState.isOverGoal,
+                excessCalories = uiState.excessCalories,
+                onEditGoalClick = { showGoalDialog = true }
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddFoodClick,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = RoundedCornerShape(18.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add Food")
-                    Spacer(modifier = Modifier.size(6.dp))
-                    Text(text = "Add Food", fontWeight = FontWeight.Bold)
-                }
-            }
-        },
-        modifier = modifier
-    ) { paddingValues ->
-
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
-        ) {
-            // 1. Daily Calorie Progress Card
-            item {
-                CalorieProgressCard(
-                    consumedCalories = uiState.totalCalories,
-                    goalCalories = uiState.dailyGoal,
-                    remainingCalories = uiState.remainingCalories,
-                    isOverGoal = uiState.isOverGoal,
-                    excessCalories = uiState.excessCalories,
-                    onEditGoalClick = { showGoalDialog = true }
-                )
-            }
-
-            // 2. Meal Breakdown Summary Grid (2x2)
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        text = "Meals Breakdown",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        MealSummaryCard(
-                            mealType = MealType.BREAKFAST,
-                            calories = uiState.mealBreakdown[MealType.BREAKFAST.displayName] ?: 0,
-                            onClick = { onMealCategoryClick(MealType.BREAKFAST) },
-                            modifier = Modifier.weight(1f)
-                        )
-                        MealSummaryCard(
-                            mealType = MealType.LUNCH,
-                            calories = uiState.mealBreakdown[MealType.LUNCH.displayName] ?: 0,
-                            onClick = { onMealCategoryClick(MealType.LUNCH) },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        MealSummaryCard(
-                            mealType = MealType.DINNER,
-                            calories = uiState.mealBreakdown[MealType.DINNER.displayName] ?: 0,
-                            onClick = { onMealCategoryClick(MealType.DINNER) },
-                            modifier = Modifier.weight(1f)
-                        )
-                        MealSummaryCard(
-                            mealType = MealType.SNACK,
-                            calories = uiState.mealBreakdown[MealType.SNACK.displayName] ?: 0,
-                            onClick = { onMealCategoryClick(MealType.SNACK) },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
-
-            // 3. Today's Food Entries List
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Today's Food Log",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Text(
-                        text = "${uiState.selectedDateEntries.size} items",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            if (uiState.selectedDateEntries.isEmpty()) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Fastfood,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(40.dp)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "No foods logged for today yet",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Tap '+ Add Food' below to log your meals!",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(
-                                onClick = onAddFoodClick,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary
-                                )
+        }
+        item {
+            Text("Meals breakdown", style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(10.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                meals.chunked(2).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        row.forEach { meal ->
+                            val calories = uiState.mealBreakdown[meal.displayName] ?: 0
+                            Surface(
+                                modifier = Modifier.weight(1f).clickable { onAddFoodClick(meal) },
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surface
                             ) {
-                                Text("+ Log First Meal")
+                                Column(Modifier.padding(13.dp)) {
+                                    Text(if (meal == MealType.SNACK) "Snacks" else meal.displayName,
+                                        style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("$calories kcal", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
                 }
-            } else {
-                items(
-                    items = uiState.selectedDateEntries,
-                    key = { it.id }
-                ) { entry ->
-                    FoodEntryItem(
-                        foodEntry = entry,
-                        onDeleteClick = { onDeleteEntry(entry) }
-                    )
-                }
             }
-
-            // Extra bottom spacing for FAB
-            item {
-                Spacer(modifier = Modifier.height(60.dp))
+        }
+        item {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Today’s food log", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                TextButton(onClick = { onAddFoodClick(null) }) { Icon(Icons.Default.Add, null); Text("Quick add") }
+            }
+            Spacer(Modifier.height(6.dp))
+            Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Column {
+                    meals.forEachIndexed { index, meal ->
+                        if (index > 0) HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+                        val entries = uiState.selectedDateEntries.filter { MealType.fromString(it.mealType) == meal }
+                        Column(Modifier.padding(horizontal = 16.dp, vertical = 11.dp)) {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Text(if (meal == MealType.SNACK) "Snacks" else meal.displayName,
+                                    style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                                Text("${entries.sumOf { it.calories }} kcal", color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.labelLarge)
+                            }
+                            if (entries.isEmpty()) {
+                                Text("No food logged", color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.bodySmall)
+                            } else entries.forEach { entry ->
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    Text(entry.foodName, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text("${entry.calories} kcal", style = MaterialTheme.typography.bodySmall)
+                                    IconButton(onClick = { onDeleteEntry(entry) }) {
+                                        Icon(Icons.Default.DeleteOutline, "Delete ${entry.foodName}", tint = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                            }
+                            TextButton(onClick = { onAddFoodClick(meal) }, contentPadding = PaddingValues(0.dp)) {
+                                Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+                                Text("Add ${meal.displayName.lowercase()}")
+                            }
+                        }
+                    }
+                    HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+                    Column {
+                        Row(Modifier.fillMaxWidth().clickable(onClick = onOpenExercise).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.FitnessCenter, null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("Exercise", style = MaterialTheme.typography.titleMedium)
+                                Text(if (uiState.exerciseEntries.isEmpty()) "No exercise logged • Tap to add" else
+                                    "${uiState.exerciseEntries.size} sessions • ${uiState.caloriesBurned} kcal burned",
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Icon(Icons.Default.Add, "Log exercise")
+                        }
+                        uiState.exerciseEntries.forEach { entry ->
+                            Row(Modifier.fillMaxWidth().padding(start = 50.dp, end = 16.dp, bottom = 10.dp)) {
+                                Text(entry.exerciseName, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text("−${entry.caloriesBurned} kcal", style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                }
             }
         }
     }

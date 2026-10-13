@@ -15,6 +15,8 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -28,7 +30,7 @@ import com.kcalfit.app.ui.nakafit.*
 
 @Composable
 fun WelcomeScreen(onNavigateToLogin: () -> Unit, onNavigateToRegister: () -> Unit,
-    onNavigateToGoogle: () -> Unit = {}, onExplore: () -> Unit = {}, modifier: Modifier = Modifier) {
+    onNavigateToGoogle: () -> Unit = {}, modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize()) {
         NakaPhoto(R.drawable.nakafit_runner, "Runner on an athletics track", Modifier.fillMaxSize())
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .1f), Color.Black.copy(alpha = .92f)))))
@@ -43,7 +45,6 @@ fun WelcomeScreen(onNavigateToLogin: () -> Unit, onNavigateToRegister: () -> Uni
             Spacer(Modifier.height(10.dp))
             OutlinedButton(onNavigateToLogin, Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(30.dp),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) { Text("I already have an account") }
-            TextButton(onExplore, Modifier.align(Alignment.CenterHorizontally)) { Text("Explore the app", color = Color.White.copy(alpha = .8f)) }
         }
     }
 }
@@ -51,7 +52,7 @@ fun WelcomeScreen(onNavigateToLogin: () -> Unit, onNavigateToRegister: () -> Uni
 @Composable
 private fun AuthPhotoShell(title: String, subtitle: String, image: Int, modifier: Modifier,
     content: @Composable ColumnScope.() -> Unit) {
-    Column(modifier.fillMaxSize().background(Color.White).imePadding().verticalScroll(rememberScrollState())) {
+    Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).imePadding().verticalScroll(rememberScrollState())) {
         Box(Modifier.fillMaxWidth().height(235.dp)) {
             NakaPhoto(image, "Fitness studio", Modifier.fillMaxSize())
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .8f)))))
@@ -80,26 +81,50 @@ private fun AuthField(label: String, value: String, onChange: (String) -> Unit,
                 if (visible) "Hide password" else "Show password")
         } } } else null,
         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Naka.Violet, unfocusedBorderColor = Naka.Line,
-            focusedTextColor = Naka.Ink, unfocusedTextColor = Naka.Ink))
+            focusedTextColor = MaterialTheme.colorScheme.onSurface, unfocusedTextColor = MaterialTheme.colorScheme.onSurface))
 }
 
 @Composable
-fun LoginScreen(onLoginSuccess: (String, String) -> Unit, onNavigateToRegister: () -> Unit,
+fun LoginScreen(onLoginSuccess: (String, String, Boolean) -> Unit, onNavigateToRegister: () -> Unit,
     onNavigateToForgotPassword: () -> Unit, errorMessage: String? = null, isLoading: Boolean = false,
     modifier: Modifier = Modifier) {
     var email by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var saveWithManager by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var retrieving by remember { mutableStateOf(false) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
     AuthPhotoShell("Welcome back", "Sign in to continue your fitness journey.", R.drawable.nakafit_runner, modifier) {
         AuthField("Email address", email, { email = it; error = null }, type = KeyboardType.Email)
         AuthField("Password", password, { password = it; error = null }, password = true, type = KeyboardType.Password)
-        TextButton(onNavigateToForgotPassword, Modifier.align(Alignment.End)) { Text("Forgot password?", color = Naka.Ink) }
+        NakaButton(if (retrieving) "Opening password manager…" else "Use Saved Password", {
+            scope.launch {
+                retrieving = true
+                try {
+                    val credential = PasswordManager(context).retrieve(context)
+                    if (credential != null) { email = credential.id; password = credential.password; error = null }
+                } catch (_: androidx.credentials.exceptions.GetCredentialCancellationException) {
+                    // User dismissed the provider; manual login remains available.
+                } catch (_: androidx.credentials.exceptions.NoCredentialException) {
+                    error = "No saved password found. Sign in manually and select Save with password manager."
+                } catch (_: Exception) { error = "Password manager is unavailable. You can still sign in manually." }
+                finally { retrieving = false }
+            }
+        }, enabled = !isLoading && !retrieving, outlined = true)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(saveWithManager, { saveWithManager = it })
+            Text("Save with password manager", color = MaterialTheme.colorScheme.onSurface)
+        }
+        Text("Your password manager stores the password. KcalFit keeps your signed-in session.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+        TextButton(onNavigateToForgotPassword, Modifier.align(Alignment.End)) { Text("Forgot password?", color = MaterialTheme.colorScheme.onSurface) }
         (errorMessage ?: error)?.let { Text(it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp) }
         NakaButton(if (isLoading) "Signing in…" else "Sign In", {
             when {
                 !Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches() -> error = "Enter a valid email address"
                 password.isBlank() -> error = "Enter your password"
-                else -> onLoginSuccess(email.trim(), password)
+                else -> onLoginSuccess(email.trim(), password, saveWithManager)
             }
         }, enabled = !isLoading)
         Row(Modifier.align(Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
@@ -114,8 +139,8 @@ fun RegisterScreen(onRegisterSuccess: (String, String, String) -> Unit, onNaviga
     errorMessage: String? = null, isLoading: Boolean = false, modifier: Modifier = Modifier) {
     var name by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
-    var confirm by rememberSaveable { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var confirm by remember { mutableStateOf("") }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
     AuthPhotoShell("Create your account", "Start building healthy habits with KcalFit.", R.drawable.nakafit_gym_motivation, modifier) {
         AuthField("Full name", name, { name = it; error = null })
@@ -147,7 +172,7 @@ fun ForgotPasswordScreen(onRequestReset: (String, (String?) -> Unit) -> Unit,
     var loading by remember { mutableStateOf(false) }
     NakaPage("Reset Password", onNavigateBackToLogin) {
         Spacer(Modifier.height(30.dp))
-        Text("Let's get you back in", color = Naka.Ink, fontSize = 28.sp)
+        Text("Let's get you back in", color = MaterialTheme.colorScheme.onSurface, fontSize = 28.sp)
         Text("Enter your email and we'll send you a reset link.", color = Naka.Muted)
         AuthField("Email address", email, { email = it }, type = KeyboardType.Email)
         message?.let { Text(it, color = Naka.Muted) }

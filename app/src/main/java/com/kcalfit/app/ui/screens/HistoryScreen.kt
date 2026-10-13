@@ -19,7 +19,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -36,6 +37,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,13 +57,20 @@ fun HistoryScreen(
     onSearchQueryChange: (String) -> Unit,
     onMealFilterChange: (String?) -> Unit,
     onDeleteEntry: (FoodEntry) -> Unit,
-    onSeedSampleData: () -> Unit,
+    onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Group entries by date
-    val groupedEntries = remember(uiState.allEntries) {
-        uiState.allEntries.groupBy { it.date }
+    var pendingDelete by remember { mutableStateOf<FoodEntry?>(null) }
+    val groupedEntries = remember(uiState.allEntries, uiState.searchQuery, uiState.selectedMealTypeFilter) {
+        uiState.allEntries.filter { entry ->
+            (uiState.selectedMealTypeFilter == null || MealType.fromString(entry.mealType).displayName == uiState.selectedMealTypeFilter) &&
+                (entry.foodName.contains(uiState.searchQuery, true) || entry.mealType.contains(uiState.searchQuery, true))
+        }.groupBy { it.date }.toSortedMap(reverseOrder())
     }
+    pendingDelete?.let { entry -> AlertDialog(onDismissRequest = { pendingDelete = null },
+        title = { Text("Delete entry?") }, text = { Text("Remove ${entry.foodName} (${entry.quantity}) from ${entry.date}?") },
+        confirmButton = { TextButton({ pendingDelete = null; onDeleteEntry(entry) }) { Text("Delete") } },
+        dismissButton = { TextButton({ pendingDelete = null }) { Text("Cancel") } }) }
 
     Scaffold(
         topBar = {
@@ -79,15 +90,7 @@ fun HistoryScreen(
                         )
                     }
                 },
-                actions = {
-                    IconButton(onClick = onSeedSampleData) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Reload Sample Data",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
+                navigationIcon = { IconButton(onNavigateBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
@@ -182,9 +185,7 @@ fun HistoryScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = onSeedSampleData) {
-                        Text("Load Sample History Data")
-                    }
+
                 }
             } else {
                 LazyColumn(
@@ -241,7 +242,7 @@ fun HistoryScreen(
                         ) { entry ->
                             FoodEntryItem(
                                 foodEntry = entry,
-                                onDeleteClick = { onDeleteEntry(entry) },
+                                onDeleteClick = { pendingDelete = entry },
                                 showDate = false
                             )
                         }

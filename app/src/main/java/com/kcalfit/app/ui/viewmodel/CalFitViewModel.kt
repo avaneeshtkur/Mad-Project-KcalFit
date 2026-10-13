@@ -21,7 +21,6 @@ import com.kcalfit.app.domain.calculator.ActivityLevel
 import com.kcalfit.app.domain.calculator.BmrCalculator
 import com.kcalfit.app.domain.calculator.FitnessGoal
 import com.kcalfit.app.domain.calculator.MacroCalculator
-import com.kcalfit.app.domain.calculator.NlpFoodParser
 import com.kcalfit.app.domain.calculator.Sex
 import com.kcalfit.app.domain.calculator.CalorieCalculationResult
 import com.kcalfit.app.domain.calculator.WorkoutPlanGenerator
@@ -30,10 +29,19 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.CancellationException
+import com.kcalfit.app.domain.chatbot.*
+import com.kcalfit.app.domain.calculator.FoodDiaryRules
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -63,6 +71,7 @@ data class CalFitUiState(
     val activeFastingSession: FastingSessionEntity? = null,
     val mealBreakdown: Map<String, Int> = emptyMap(),
     val exerciseEntries: List<ExerciseEntry> = emptyList(),
+    val allExerciseEntries: List<ExerciseEntry> = emptyList(),
     val recipesList: List<RecipeEntity> = emptyList(),
     val coachMessages: List<CoachMessageEntity> = emptyList(),
     val friendsList: List<FriendEntity> = emptyList(),
@@ -99,6 +108,8 @@ class CalFitViewModel(
     private val preferences get() = CalFitApplication.instance.userPreferences
     private val _authReady = MutableStateFlow(false)
     val authReady: StateFlow<Boolean> = _authReady.asStateFlow()
+    private val _authenticated = MutableStateFlow(false)
+    val authenticated: StateFlow<Boolean> = _authenticated.asStateFlow()
     private val _pendingEmail = MutableStateFlow("")
     val pendingEmail: StateFlow<String> = _pendingEmail.asStateFlow()
 
@@ -125,13 +136,17 @@ class CalFitViewModel(
                 try {
                     val session = authService.refresh(refreshToken)
                     acceptSession(session)
-                } catch (_: Exception) {
-                    preferences.clearAuthSession()
-                    repository.setLoggedIn(false)
+                } catch (e: Exception) {
+                    if (e is SupabaseAuthService.AuthHttpException && e.status in listOf(400, 401, 403)) {
+                        preferences.clearAuthSession()
+                        repository.setLoggedIn(false)
+                    }
+                    // A network failure keeps the existing local session for offline diary use.
                 }
             } else {
                 repository.setLoggedIn(false)
             }
+            _authenticated.value = repository.getUserProfile()?.isLoggedIn == true
             _authReady.value = true
         }
     }
@@ -139,11 +154,8 @@ class CalFitViewModel(
     // Sub-combine 1
     private val mainFlow1 = combine(
         userProfileFlow,
-        _selectedDate,
-        selectedDateEntriesFlow
-    ) { user, date, foodEntries ->
-        Triple(user, date, foodEntries)
-    }
+        _selectedDate.flatMapLatest { date -> repository.getEntriesForDate(date).map { date to it } }
+    ) { user, datedEntries -> Triple(user, datedEntries.first, datedEntries.second) }
 
     // Sub-combine 2
     private val mainFlow2 = combine(
@@ -165,16 +177,17 @@ class CalFitViewModel(
         val targetCarbs = user?.targetCarbsGrams ?: 210
         val targetFat = user?.targetFatGrams ?: 60
 
-        val totalCals = foodEntries.sumOf { it.calories }
+        val totals = FoodDiaryRules.totals(foodEntries)
+        val totalCals = totals.calories
         val burnedCals = exerciseEntries.sumOf { it.caloriesBurned }
         val netCals = totalCals - burnedCals
-        val remaining = goal - netCals
-        val isOver = netCals > goal
-        val excess = if (isOver) netCals - goal else 0
+        val remaining = goal - totalCals
+        val isOver = totalCals > goal
+        val excess = if (isOver) totalCals - goal else 0
 
-        val proteinSum = foodEntries.sumOf { it.proteinGrams }
-        val carbsSum = foodEntries.sumOf { it.carbsGrams }
-        val fatSum = foodEntries.sumOf { it.fatGrams }
+        val proteinSum = totals.protein
+        val carbsSum = totals.carbs
+        val fatSum = totals.fat
 
         val breakdown = mutableMapOf(
             MealType.BREAKFAST.displayName to 0,
@@ -213,7 +226,7 @@ class CalFitViewModel(
     }
 
     // Final UI State flow
-    val uiState: StateFlow<CalFitUiState> = combine(
+    private val enrichedState = combine(
         primaryStateFlow,
         allEntriesFlow,
         masterFoodSearchFlow,
@@ -226,6 +239,9 @@ class CalFitViewModel(
             coachMessages = coachMsgs,
             recipesList = recipes
         )
+    }
+    val uiState: StateFlow<CalFitUiState> = combine(enrichedState, repository.getAllExerciseEntries(), _searchQuery, _selectedMealTypeFilter) { state, workouts, query, filter ->
+        state.copy(allExerciseEntries = workouts, searchQuery = query, selectedMealTypeFilter = filter)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -236,6 +252,18 @@ class CalFitViewModel(
     fun setSelectedDate(date: String) { _selectedDate.value = date }
     fun setSearchQuery(query: String) { _searchQuery.value = query }
     fun setMealTypeFilter(filter: String?) { _selectedMealTypeFilter.value = filter }
+
+    fun updateLocalProfile(name: String? = null, height: Double? = null, weight: Double? = null) {
+        viewModelScope.launch {
+            val user = repository.getUserProfile() ?: return@launch
+            repository.saveUserProfile(user.copy(name = name ?: user.name, heightCm = height ?: user.heightCm, weightKg = weight ?: user.weightKg))
+            if (weight != null) repository.addWeight(weight, _selectedDate.value, "Profile update")
+        }
+    }
+
+    fun lookupBarcode(barcode: String, onResult: (FoodItemEntity?) -> Unit) {
+        viewModelScope.launch { onResult(repository.findFoodByBarcode(barcode.trim())) }
+    }
 
     // Auth & Verification
     fun registerUser(name: String, email: String, password: String, onResult: (String?) -> Unit) {
@@ -286,10 +314,13 @@ class CalFitViewModel(
     }
 
     private suspend fun acceptSession(session: SupabaseAuthService.Session): Boolean {
+        coachJob?.cancelAndJoin()
+        coach.reset()
+        _coachAction.value = null
         val previous = repository.getUserProfile()
         if (previous != null && previous.firebaseUid != session.userId) {
             // One local profile/log at a time: never show another account's entries.
-            CalFitApplication.instance.database.clearAllTables()
+            withContext(Dispatchers.IO) { CalFitApplication.instance.database.clearAllTables() }
             repository.seedSampleDataIfNeeded()
         }
         val current = repository.getUserProfile()
@@ -317,6 +348,7 @@ class CalFitViewModel(
         repository.saveUserProfile(updated)
         preferences.saveAuthSession(session.userId, session.refreshToken)
         preferences.setUserEmail(session.email)
+        _authenticated.value = true
         return updated.isOnboarded
     }
 
@@ -435,6 +467,20 @@ class CalFitViewModel(
         viewModelScope.launch { repository.deleteFoodEntry(entry) }
     }
 
+    fun saveFoodEntry(entry: FoodEntry, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            try { repository.insertFoodEntry(entry); _selectedDate.value = entry.date; onResult(null) }
+            catch (e: Exception) { onResult(e.message ?: "Food could not be saved") }
+        }
+    }
+
+    fun removeFoodEntry(entry: FoodEntry, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            try { repository.deleteFoodEntry(entry); onResult(null) }
+            catch (e: Exception) { onResult(e.message ?: "Entry could not be deleted") }
+        }
+    }
+
     fun addWaterIntake(amountMl: Int) {
         viewModelScope.launch { repository.addWater(amountMl, _selectedDate.value) }
     }
@@ -467,46 +513,51 @@ class CalFitViewModel(
         viewModelScope.launch { repository.startFasting(protocol, durationHours) }
     }
 
+    private var coachJob: Job? = null
+    private val coach = FitnessChatbot()
+    private val coachResponder = CoachResponder()
+    private val _coachBusy = MutableStateFlow(false)
+    val coachBusy = _coachBusy.asStateFlow()
+    private val _coachAction = MutableStateFlow<CoachAction?>(null)
+    val coachAction = _coachAction.asStateFlow()
+    private val _coachError = MutableStateFlow<String?>(null)
+    val coachError = _coachError.asStateFlow()
+    fun clearCoachAction() { _coachAction.value = null }
+
     fun sendCoachQuery(userQuery: String) {
-        viewModelScope.launch {
-            repository.sendCoachMessage(userQuery, "USER")
-
-            val currentCals = uiState.value.totalCalories
-            val goalCals = uiState.value.dailyGoal
-            val remainingCals = uiState.value.remainingCalories
-            val protein = uiState.value.totalProteinGrams.toInt()
-
-            val aiResponse = com.kcalfit.app.domain.chatbot.FitnessChatbot.getResponse(userQuery, currentCals, goalCals, remainingCals, protein, uiState.value.targetProteinGrams, uiState.value.totalCarbsGrams.toInt(), uiState.value.totalFatGrams.toInt(), uiState.value.totalWaterMl, uiState.value.caloriesBurned, uiState.value.userProfile?.name ?: "User").message
-
-            repository.sendCoachMessage(aiResponse, "COACH")
+        if (userQuery.isBlank() || _coachBusy.value || !_authenticated.value) return
+        _coachBusy.value = true
+        _coachError.value = null
+        _coachAction.value = null
+        coachJob = viewModelScope.launch {
+            try {
+                val query = userQuery.trim().take(2000)
+                repository.sendCoachMessage(query, "USER")
+                val data = CoachSnapshot(repository.getAllEntries().first(), repository.searchMasterFoods("").first(),
+                    uiState.value.dailyGoal, _selectedDate.value, repository.getAllExerciseEntries().first().map { it.date },
+                    uiState.value.userProfile?.exerciseDaysPerWeek ?: 0, uiState.value.targetProteinGrams,
+                    uiState.value.targetCarbsGrams, uiState.value.targetFatGrams)
+                val (request, localReply) = withContext(Dispatchers.Default) { coach.answer(query, data) }
+                val reply = coachResponder.respond(query, localReply,
+                    request.intent in setOf(CoachIntent.WORKOUT, CoachIntent.TECHNIQUE))
+                repository.sendCoachMessage(reply.message, "COACH")
+                _coachAction.value = reply.action
+            } catch (e: CancellationException) { throw e }
+            catch (_: Exception) { _coachError.value = "Couldn't read or save this conversation. Please try again." }
+            finally { _coachBusy.value = false }
         }
-    }
-
-    fun processVoiceInput(spokenText: String) {
-        viewModelScope.launch {
-            val parsedList = NlpFoodParser.parseVoiceInput(spokenText)
-            for (parsed in parsedList) {
-                addFoodEntry(
-                    foodName = parsed.foodName,
-                    brand = "Voice Log",
-                    mealType = parsed.detectedMealType.displayName,
-                    calories = parsed.estimatedCalories,
-                    protein = parsed.estimatedProtein.toDouble(),
-                    carbs = parsed.estimatedCarbs.toDouble(),
-                    fat = parsed.estimatedFat.toDouble(),
-                    quantity = parsed.estimatedQuantity,
-                    date = _selectedDate.value
-                )
-            }
-        }
-    }
-
-    fun seedSampleData() {
-        viewModelScope.launch { repository.seedSampleDataIfNeeded(force = true) }
     }
 
     fun logout() {
+        coachJob?.cancel()
+        coach.reset()
+        _coachAction.value = null
+        val token = preferences.getRefreshToken()
+        _authenticated.value = false
         preferences.clearSession()
-        viewModelScope.launch { repository.setLoggedIn(false) }
+        viewModelScope.launch {
+            repository.setLoggedIn(false)
+            try { authService.signOut(token) } catch (_: Exception) { /* Local session is already cleared. */ }
+        }
     }
 }

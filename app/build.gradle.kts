@@ -11,7 +11,13 @@ val localSettings = Properties().apply {
     val settingsFile = rootProject.file("local.properties")
     if (settingsFile.exists()) settingsFile.inputStream().use(::load)
 }
-fun authSetting(name: String): String = (localSettings.getProperty(name) ?: "").replace("\\", "\\\\").replace("\"", "\\\"")
+fun authSetting(name: String, vararg aliases: String): String {
+    val value = sequenceOf(name, *aliases)
+        .mapNotNull { localSettings.getProperty(it) }
+        .firstOrNull { it.isNotBlank() }
+        .orEmpty()
+    return value.replace("\\", "\\\\").replace("\"", "\\\"")
+}
 
 android {
     namespace = "com.kcalfit.app"
@@ -25,8 +31,8 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "SUPABASE_URL", "\"${authSetting("SUPABASE_URL")}\"")
-        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${authSetting("SUPABASE_PUBLISHABLE_KEY")}\"")
+        buildConfigField("String", "SUPABASE_URL", "\"${authSetting("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL")}\"")
+        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${authSetting("SUPABASE_PUBLISHABLE_KEY", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY")}\"")
     }
 
     buildTypes {

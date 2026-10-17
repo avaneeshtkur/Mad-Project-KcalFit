@@ -22,7 +22,10 @@ import com.kcalfit.app.data.model.WaterEntry
 import com.kcalfit.app.data.model.WeightEntry
 import com.kcalfit.app.data.model.WorkoutRoutineEntity
 import com.kcalfit.app.data.preferences.UserPreferences
+import com.kcalfit.app.data.remote.OpenFoodFactsClient
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -34,7 +37,8 @@ class FoodRepository(
     private val foodItemDao: FoodItemDao,
     private val exerciseDao: ExerciseDao,
     private val lifestyleDao: LifestyleDao,
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
+    private val foodApi: OpenFoodFactsClient = OpenFoodFactsClient()
 ) {
 
     // --- User Profile ---
@@ -59,7 +63,22 @@ class FoodRepository(
 
     // --- Master Foods Search & Barcode ---
     fun searchMasterFoods(query: String): Flow<List<FoodItemEntity>> = foodItemDao.searchMasterFoods(query)
-    suspend fun findFoodByBarcode(barcode: String): FoodItemEntity? = foodItemDao.findByBarcode(barcode)
+    fun searchCachedApiFoods(query: String): Flow<List<FoodItemEntity>> = foodItemDao.searchCachedApiFoods(query)
+    fun searchLiveFoods(query: String): Flow<List<FoodItemEntity>> = flow {
+        if (query.trim().length < 2) {
+            emit(emptyList())
+            return@flow
+        }
+        val live = foodApi.search(query)
+        if (live.isNotEmpty()) {
+            foodItemDao.insertFoodItems(live)
+            emit(live)
+        } else {
+            emit(foodItemDao.searchCachedApiFoods(query).first())
+        }
+    }
+    suspend fun findFoodByBarcode(barcode: String): FoodItemEntity? =
+        foodApi.lookupBarcode(barcode) ?: foodItemDao.findByBarcode(barcode)
     suspend fun insertCustomFood(item: FoodItemEntity): Long = foodItemDao.insertFoodItem(item)
 
     // --- Exercise ---
@@ -111,26 +130,6 @@ class FoodRepository(
     suspend fun seedSampleDataIfNeeded() {
         // The old preference can outlive a Room destructive migration. Room's actual
         // contents, not a preference flag, determine whether starter foods are needed.
-        run {
-            val masterFoods = listOf(
-                FoodItemEntity(name = "Roti / Chapati", brand = "Indian Homemade", category = "Grains", calories = 120, proteinGrams = 3.5, carbsGrams = 22.0, fatGrams = 1.2),
-                FoodItemEntity(name = "Steamed Rice", brand = "Generic", category = "Grains", calories = 205, proteinGrams = 4.2, carbsGrams = 45.0, fatGrams = 0.4),
-                FoodItemEntity(name = "Dal Tadka", brand = "Indian Home Style", category = "Lentils", calories = 180, proteinGrams = 9.0, carbsGrams = 24.0, fatGrams = 5.0),
-                FoodItemEntity(name = "Paneer Tikka", brand = "Indian Tandoori", category = "Dairy", calories = 260, proteinGrams = 16.0, carbsGrams = 6.0, fatGrams = 18.0),
-                FoodItemEntity(name = "Chicken Breast", brand = "Fresh Meat", category = "Meat", calories = 165, proteinGrams = 31.0, carbsGrams = 0.0, fatGrams = 3.6),
-                FoodItemEntity(name = "Boiled Egg", brand = "Farm Fresh", category = "Eggs", calories = 78, proteinGrams = 6.3, carbsGrams = 0.6, fatGrams = 5.3),
-                FoodItemEntity(name = "Oatmeal with Milk", brand = "Breakfast Bowl", category = "Grains", calories = 220, proteinGrams = 8.0, carbsGrams = 34.0, fatGrams = 4.5),
-                FoodItemEntity(name = "Banana", brand = "Fresh Fruit", category = "Fruits", calories = 105, proteinGrams = 1.3, carbsGrams = 27.0, fatGrams = 0.3),
-                FoodItemEntity(name = "Apple", brand = "Fresh Fruit", category = "Fruits", calories = 95, proteinGrams = 0.5, carbsGrams = 25.0, fatGrams = 0.3),
-                FoodItemEntity(name = "Masala Dosa", brand = "South Indian", category = "Breakfast", calories = 250, proteinGrams = 5.0, carbsGrams = 38.0, fatGrams = 10.0),
-                FoodItemEntity(name = "Steamed Idli", brand = "South Indian", category = "Breakfast", calories = 70, proteinGrams = 2.0, carbsGrams = 15.0, fatGrams = 0.2),
-                FoodItemEntity(name = "Greek Yogurt", brand = "Amul / Nestle", category = "Dairy", calories = 120, proteinGrams = 10.0, carbsGrams = 8.0, fatGrams = 3.0),
-                FoodItemEntity(name = "Whole Almonds", brand = "Nutraj", category = "Snacks", calories = 160, proteinGrams = 6.0, carbsGrams = 6.0, fatGrams = 14.0)
-            )
-            val missing = masterFoods.filter { foodItemDao.findByNameAndBrand(it.name, it.brand) == null }
-            if (missing.isNotEmpty()) foodItemDao.insertFoodItems(missing)
-        }
-
         // Seed Master Exercises dataset
         if (exerciseDao.getMasterExerciseCount() == 0) {
             val masterExercises = listOf(

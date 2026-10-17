@@ -52,6 +52,8 @@ import com.kcalfit.app.data.model.MealType
 fun FoodSearchScreen(
     searchResults: List<FoodItemEntity>,
     searchQuery: String,
+    foodSearchLoading: Boolean = false,
+    foodSearchError: String? = null,
     onSearchQueryChange: (String) -> Unit,
     onAddFoodItem: (
         name: String, brand: String, mealType: String, calories: Int,
@@ -155,6 +157,8 @@ fun FoodSearchScreen(
             }
 
             Text("Database Results (${searchResults.size})", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            if (foodSearchLoading) Text("Searching Open Food Facts…", color = MaterialTheme.colorScheme.primary)
+            if (foodSearchError != null) Text(foodSearchError!!, color = MaterialTheme.colorScheme.error)
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),

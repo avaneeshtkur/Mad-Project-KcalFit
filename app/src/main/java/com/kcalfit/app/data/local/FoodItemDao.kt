@@ -19,6 +19,9 @@ interface FoodItemDao {
     @Query("SELECT * FROM master_foods WHERE name LIKE '%' || :query || '%' OR brand LIKE '%' || :query || '%' OR category LIKE '%' || :query || '%' ORDER BY name ASC")
     fun searchMasterFoods(query: String): Flow<List<FoodItemEntity>>
 
+    @Query("SELECT * FROM master_foods WHERE barcode IS NOT NULL AND (name LIKE '%' || :query || '%' OR brand LIKE '%' || :query || '%' OR category LIKE '%' || :query || '%') ORDER BY name ASC")
+    fun searchCachedApiFoods(query: String): Flow<List<FoodItemEntity>>
+
     @Query("SELECT * FROM master_foods WHERE barcode = :barcode LIMIT 1")
     suspend fun findByBarcode(barcode: String): FoodItemEntity?
 

@@ -10,6 +10,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +68,9 @@ private fun TrackActivityOverview(uiState: CalFitUiState) {
     val dateKeys = dates.map(LocalDate::toString).toSet()
     val entries = uiState.allExerciseEntries.filter { it.date in dateKeys }
     val durations = dates.map { date -> entries.filter { it.date == date.toString() }.sumOf { it.durationMinutes.coerceAtLeast(0) }.toFloat() }
+    val distancesByDay = dates.map { date -> entries.filter { it.date == date.toString() }.sumOf { item ->
+        item.distanceKm.takeIf(Double::isFinite)?.coerceAtLeast(0.0) ?: 0.0
+    }.toFloat() }
     val todayDistances = uiState.exerciseEntries.map { it.distanceKm }.filter { it.isFinite() && it > 0.0 }
     val distanceToday = todayDistances.sum()
     val hasDistanceToday = todayDistances.isNotEmpty()
@@ -98,10 +103,10 @@ private fun TrackActivityOverview(uiState: CalFitUiState) {
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 TrackMetric(
-                    label = "Steps",
-                    value = "—",
-                    supporting = "No step source connected",
-                    icon = Icons.Default.DirectionsWalk,
+                    label = "Workout time",
+                    value = "${uiState.exerciseEntries.sumOf { it.durationMinutes.coerceAtLeast(0) }}",
+                    supporting = "minutes today",
+                    icon = Icons.Default.Timer,
                     modifier = Modifier.weight(1f)
                 )
                 TrackMetric(
@@ -113,6 +118,18 @@ private fun TrackActivityOverview(uiState: CalFitUiState) {
                 )
             }
 
+            Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.DirectionsWalk, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(21.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Steps", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                        Text("Step tracking is not connected", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Text("—", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -121,7 +138,16 @@ private fun TrackActivityOverview(uiState: CalFitUiState) {
                     Text("minutes per day", style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                TrackWeekChart(dates.map { it.format(DateTimeFormatter.ofPattern("EE")) }, durations, dates.indexOf(selected))
+                TrackWeekChart(dates.map { it.format(DateTimeFormatter.ofPattern("EE")) }, durations, dates.indexOf(selected), "min")
+            }
+            if (hasDistanceHistory) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Distance", Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                        Text("km per day", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    TrackWeekChart(dates.map { it.format(DateTimeFormatter.ofPattern("EE")) }, distancesByDay, dates.indexOf(selected), "km")
+                }
             }
             if (hasDistanceHistory) {
                 val km = validDistances.sum()
@@ -160,15 +186,16 @@ private fun TrackMetric(
 }
 
 @Composable
-private fun TrackWeekChart(dayLabels: List<String>, minutes: List<Float>, selectedIndex: Int) {
+private fun TrackWeekChart(dayLabels: List<String>, values: List<Float>, selectedIndex: Int, unit: String) {
     val grid = MaterialTheme.colorScheme.outlineVariant
     val bar = MaterialTheme.colorScheme.primary
     val label = MaterialTheme.colorScheme.onSurfaceVariant
-    val peak = minutes.maxOrNull()?.coerceAtLeast(1f) ?: 1f
-    val hasData = minutes.any { it > 0f }
+    val peak = values.maxOrNull()?.coerceAtLeast(1f) ?: 1f
+    val hasData = values.any { it > 0f }
+    val animatedValues = values.map { value -> animateFloatAsState(value, tween(500), label = "Activity bar").value }
     Column(Modifier.fillMaxWidth().semantics {
-        contentDescription = if (hasData) dayLabels.zip(minutes).joinToString { (day, value) -> "$day: ${value.toInt()} minutes" }
-            else "No recorded workout minutes this week"
+        contentDescription = if (hasData) dayLabels.zip(values).joinToString { (day, value) -> "$day: ${"%.1f".format(value)} $unit" }
+            else "No recorded $unit this week"
     }) {
         Box {
             Canvas(Modifier.fillMaxWidth().height(94.dp).padding(horizontal = 5.dp)) {
@@ -176,17 +203,17 @@ private fun TrackWeekChart(dayLabels: List<String>, minutes: List<Float>, select
                     val y = size.height * index / 3f
                     drawLine(grid, Offset(0f, y), Offset(size.width, y), 1.dp.toPx())
                 }
-                val slot = size.width / minutes.size.coerceAtLeast(1)
-                minutes.forEachIndexed { index, value ->
+                val slot = size.width / animatedValues.size.coerceAtLeast(1)
+                animatedValues.forEachIndexed { index, value ->
                     if (value > 0f) {
                         val height = (value / peak * size.height).coerceAtLeast(3.dp.toPx())
-                        drawRoundRect(bar.copy(alpha = if (index == minutes.lastIndex) 1f else .72f),
+                        drawRoundRect(bar.copy(alpha = if (index == values.lastIndex) 1f else .72f),
                             Offset(index * slot + slot * .22f, size.height - height),
                             Size(slot * .56f, height), CornerRadius(8.dp.toPx(), 8.dp.toPx()))
                     }
                 }
             }
-            if (!hasData) Text("No workouts logged this week", Modifier.align(Alignment.Center),
+            if (!hasData) Text("No $unit recorded this week", Modifier.align(Alignment.Center),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {

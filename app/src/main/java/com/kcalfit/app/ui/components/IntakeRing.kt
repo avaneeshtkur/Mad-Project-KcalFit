@@ -20,7 +20,7 @@ fun IntakeRing(consumed: Int, goal: Int, modifier: Modifier = Modifier) {
     // animateFloatAsState starts at the actual value, so entering the screen doesn't replay from zero.
     val progress by animateFloatAsState(calorieRingProgress(consumed,goal), tween(650), label = "Calorie intake")
     val accent = if(consumed > goal && goal > 0) Color(0xFFDCBCFF) else Color.White
-    Box(modifier.size(112.dp * LocalDensity.current.fontScale.coerceIn(1f, 1.8f)).semantics(mergeDescendants = true) {
+    Box(modifier.size(126.dp * LocalDensity.current.fontScale.coerceIn(1f, 1.55f)).semantics(mergeDescendants = true) {
         contentDescription = "$consumed calories of $goal calorie goal"
         progressBarRangeInfo = ProgressBarRangeInfo(calorieRingProgress(consumed,goal),0f..1f)
     }, contentAlignment = Alignment.Center) {

@@ -35,9 +35,9 @@ fun OnboardingScreen(initialName: String = "Fitness User",
     var activity by rememberSaveable { mutableStateOf(ActivityLevel.MODERATELY_ACTIVE.name) }
     var days by rememberSaveable { mutableIntStateOf(3) }
     var error by remember { mutableStateOf<String?>(null) }
-    val titles = listOf("Welcome to KcalFit", "What is your goal?", "Let's get to know you", "What is your height?",
+    val titles = listOf("Welcome to Calfit", "What is your goal?", "Let's get to know you", "What is your height?",
         "What is your weight?", "Your activity level", "You're all set!")
-    NakaPage(if (step == 0) "KcalFit" else "Set Your Goals", if (step > 0) ({ step-- }) else null) {
+    NakaPage(if (step == 0) "Calfit" else "Set Your Goals", if (step > 0) ({ step-- }) else null) {
         LinearProgressIndicator(progress = { (step + 1) / 7f }, Modifier.fillMaxWidth().height(5.dp), color = Naka.Violet, trackColor = Naka.Lavender)
         Text("${step + 1} of 7", color = Naka.Muted, fontSize = 12.sp)
         AnimatedContent(step, label = "onboarding steps") { selectedStep ->

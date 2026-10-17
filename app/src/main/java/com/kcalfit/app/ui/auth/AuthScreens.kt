@@ -35,7 +35,7 @@ fun WelcomeScreen(onNavigateToLogin: () -> Unit, onNavigateToRegister: () -> Uni
         NakaPhoto(R.drawable.nakafit_runner, "Runner on an athletics track", Modifier.fillMaxSize())
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .1f), Color.Black.copy(alpha = .92f)))))
         Column(Modifier.fillMaxSize().padding(24.dp).navigationBarsPadding(), verticalArrangement = Arrangement.Bottom) {
-            Text("KcalFit", color = Color.White, fontSize = 44.sp, fontWeight = FontWeight.SemiBold)
+            Text("Calfit", color = Color.White, fontSize = 44.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(16.dp))
             Text("A healthier you,\none day at a time.", color = Color.White, fontSize = 31.sp, lineHeight = 37.sp)
             Spacer(Modifier.height(12.dp))
@@ -57,7 +57,7 @@ private fun AuthPhotoShell(title: String, subtitle: String, image: Int, modifier
             NakaPhoto(image, "Fitness studio", Modifier.fillMaxSize())
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .8f)))))
             Column(Modifier.align(Alignment.BottomStart).padding(24.dp)) {
-                Text("KcalFit", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                Text("Calfit", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(10.dp))
                 Text(title, color = Color.White, fontSize = 30.sp, lineHeight = 35.sp)
             }
@@ -116,7 +116,7 @@ fun LoginScreen(onLoginSuccess: (String, String, Boolean) -> Unit, onNavigateToR
             Checkbox(saveWithManager, { saveWithManager = it })
             Text("Save with password manager", color = MaterialTheme.colorScheme.onSurface)
         }
-        Text("Your password manager stores the password. KcalFit keeps your signed-in session.",
+        Text("Your password manager stores the password. Calfit keeps your signed-in session.",
             color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
         TextButton(onNavigateToForgotPassword, Modifier.align(Alignment.End)) { Text("Forgot password?", color = MaterialTheme.colorScheme.onSurface) }
         (errorMessage ?: error)?.let { Text(it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp) }
@@ -128,7 +128,7 @@ fun LoginScreen(onLoginSuccess: (String, String, Boolean) -> Unit, onNavigateToR
             }
         }, enabled = !isLoading)
         Row(Modifier.align(Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
-            Text("New to KcalFit?", color = Naka.Muted, fontSize = 13.sp)
+            Text("New to Calfit?", color = Naka.Muted, fontSize = 13.sp)
             TextButton(onNavigateToRegister) { Text("Sign Up", color = Naka.Violet) }
         }
     }
@@ -142,7 +142,7 @@ fun RegisterScreen(onRegisterSuccess: (String, String, String) -> Unit, onNaviga
     var password by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
-    AuthPhotoShell("Create your account", "Start building healthy habits with KcalFit.", R.drawable.nakafit_gym_motivation, modifier) {
+    AuthPhotoShell("Create your account", "Start building healthy habits with Calfit.", R.drawable.nakafit_gym_motivation, modifier) {
         AuthField("Full name", name, { name = it; error = null })
         AuthField("Email address", email, { email = it; error = null }, type = KeyboardType.Email)
         AuthField("Password", password, { password = it; error = null }, true, KeyboardType.Password)

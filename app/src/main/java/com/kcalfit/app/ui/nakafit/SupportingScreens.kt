@@ -174,7 +174,7 @@ fun NotificationSettingsScreen(onBack: () -> Unit, darkMode: Boolean, onDarkMode
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Dark mode", color = textColor)
-                Text(if (darkMode) "Use the dark KcalFit palette" else "Use the light KcalFit palette", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                Text(if (darkMode) "Use the dark Calfit palette" else "Use the light Calfit palette", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
             }
             Switch(checked = darkMode, onCheckedChange = onDarkMode,
                 colors = SwitchDefaults.colors(checkedTrackColor = Naka.Violet))
@@ -271,8 +271,8 @@ fun SettingsScreen(onBack: () -> Unit, darkMode: Boolean, onDarkMode: (Boolean) 
         Row(verticalAlignment = Alignment.CenterVertically) { Text("Metric units", Modifier.weight(1f)); Switch(metric, { metric = it }) }
         Text(if (metric) "Centimeters and kilograms" else "Imperial preference selected", color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(verticalAlignment = Alignment.CenterVertically) { Text("Dark mode", Modifier.weight(1f)); Switch(darkMode, onDarkMode) }
-        Text("Appearance is applied throughout KcalFit.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-        Text("KcalFit · Version 1.0", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Appearance is applied throughout Calfit.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+        Text("Calfit · Version 1.0", color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

@@ -1,0 +1,82 @@
+ M app/build.gradle.kts
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/Android Large - 15.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/Android Large - 20.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/Android Large - 21.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/Android Large - 22.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/Android Large - 23.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/Android Large - 24.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/MyFitnessPal iOS Onboarding 0.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/MyFitnessPal iOS Onboarding 1.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/MyFitnessPal iOS Onboarding 10.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/MyFitnessPal iOS Onboarding 11.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/MyFitnessPal iOS Onboarding 12.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/MyFitnessPal iOS Onboarding 13.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/MyFitnessPal iOS Onboarding 14.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/MyFitnessPal iOS Onboarding 15.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/MyFitnessPal iOS Onboarding 16.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/MyFitnessPal iOS Onboarding 17.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/MyFitnessPal iOS Onboarding 18.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/MyFitnessPal iOS Onboarding 19.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/MyFitnessPal iOS Onboarding 2.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/MyFitnessPal iOS Onboarding 20.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/MyFitnessPal iOS Onboarding 3.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/MyFitnessPal iOS Onboarding 4.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/MyFitnessPal iOS Onboarding 5.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/MyFitnessPal iOS Onboarding 6.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/MyFitnessPal iOS Onboarding 7.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/MyFitnessPal iOS Onboarding 8.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/MyFitnessPal iOS Onboarding 9.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/MyFitnessPal iOS Onboarding/flowbite_file-export-solid.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/ui components/colors.png"
+A  "app/images/MYFITNESSPAL UI/MyFitnessPal application UI design (Community)/myfitnesspal ui/ui components/icons.png"
+ M app/src/main/AndroidManifest.xml
+ M app/src/main/java/com/kcalfit/app/CalFitApplication.kt
+ M app/src/main/java/com/kcalfit/app/MainActivity.kt
+ M app/src/main/java/com/kcalfit/app/data/local/AppDatabase.kt
+ M app/src/main/java/com/kcalfit/app/data/local/FoodItemDao.kt
+ M app/src/main/java/com/kcalfit/app/data/model/FoodItemEntity.kt
+ M app/src/main/java/com/kcalfit/app/data/remote/OpenFoodFactsClient.kt
+ M app/src/main/java/com/kcalfit/app/data/repository/FoodRepository.kt
+ M app/src/main/java/com/kcalfit/app/data/repository/SupabaseAuthService.kt
+ M app/src/main/java/com/kcalfit/app/domain/calculator/FoodDiaryRules.kt
+ M app/src/main/java/com/kcalfit/app/ui/auth/AuthScreens.kt
+ M app/src/main/java/com/kcalfit/app/ui/chatbot/ChatbotScreen.kt
+ M app/src/main/java/com/kcalfit/app/ui/components/IntakeRing.kt
+ M app/src/main/java/com/kcalfit/app/ui/nakafit/SupportingScreens.kt
+ M app/src/main/java/com/kcalfit/app/ui/nakafit/TrackingScreens.kt
+ M app/src/main/java/com/kcalfit/app/ui/navigation/NavGraph.kt
+ M app/src/main/java/com/kcalfit/app/ui/navigation/Screen.kt
+ M app/src/main/java/com/kcalfit/app/ui/onboarding/OnboardingScreen.kt
+ M app/src/main/java/com/kcalfit/app/ui/screens/AddFoodScreen.kt
+ M app/src/main/java/com/kcalfit/app/ui/screens/HomeScreen.kt
+ M app/src/main/java/com/kcalfit/app/ui/splash/SplashScreen.kt
+ M app/src/main/java/com/kcalfit/app/ui/viewmodel/CalFitViewModel.kt
+ M app/src/main/res/drawable/ic_launcher_background.xml
+ M app/src/main/res/drawable/ic_launcher_foreground.xml
+ M app/src/main/res/values/colors.xml
+ M app/src/main/res/values/strings.xml
+ M app/src/main/res/values/themes.xml
+ M docs/auth-and-food-setup.md
+ M docs/food-api-integration.md
+ D docs/ui-redesign-checklist.md
+ D docs/ui-redesign-progress.md
+ M gradle/libs.versions.toml
+?? .agents/
+?? .aider-desk/
+?? app/src/androidTest/
+?? app/src/debug/
+?? app/src/main/assets/
+?? app/src/main/java/com/kcalfit/app/data/model/FoodSearchCacheEntity.kt
+?? app/src/main/java/com/kcalfit/app/data/remote/FoodHttpTransport.kt
+?? app/src/main/java/com/kcalfit/app/data/remote/FoodRequestPolicy.kt
+?? app/src/main/java/com/kcalfit/app/data/search/
+?? app/src/main/java/com/kcalfit/app/ui/viewmodel/FoodSearchEngine.kt
+?? app/src/main/res/drawable/phosphor_barbell_regular.xml
+?? app/src/main/res/drawable/phosphor_fork_knife_regular.xml
+?? app/src/main/res/drawable/phosphor_heart_regular.xml
+?? app/src/test/java/com/kcalfit/app/data/
+?? app/src/test/java/com/kcalfit/app/ui/
+?? docs/local-design/
+?? docs/phosphor-icons.md
+?? docs/third-party/
+?? skills-lock.json

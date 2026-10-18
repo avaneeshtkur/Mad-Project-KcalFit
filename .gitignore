@@ -12,3 +12,6 @@ app/build
 .kotlin/
 *.pyc
 __pycache__/
+.agents/
+.aider-desk/
+skills-lock.json

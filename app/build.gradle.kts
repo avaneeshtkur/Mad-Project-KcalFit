@@ -21,7 +21,7 @@ fun authSetting(name: String, vararg aliases: String): String {
 
 android {
     namespace = "com.kcalfit.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.kcalfit.app"
@@ -31,8 +31,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "PLAY_PREMIUM_PRODUCT_ID", "\"${authSetting("PLAY_PREMIUM_PRODUCT_ID")}\"")
         buildConfigField("String", "SUPABASE_URL", "\"${authSetting("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL")}\"")
         buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${authSetting("SUPABASE_PUBLISHABLE_KEY", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY")}\"")
+        buildConfigField("String", "OPEN_FOOD_FACTS_CONTACT", "\"${authSetting("OPEN_FOOD_FACTS_CONTACT")}\"")
     }
 
     buildTypes {
@@ -58,7 +60,10 @@ android {
 }
 
 dependencies {
-    implementation("androidx.core:core-splashscreen:1.0.1")
+    implementation("com.android.billingclient:billing:8.0.0")
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
+    implementation("androidx.health.connect:connect-client:1.1.0")
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
     implementation("androidx.credentials:credentials:1.5.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
     implementation(platform(libs.androidx.compose.bom))
@@ -88,8 +93,12 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
 
     testImplementation(libs.junit)
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    testImplementation("org.json:json:20240303")
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

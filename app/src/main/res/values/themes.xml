@@ -2,12 +2,4 @@
 <resources>
 
     <style name="Theme.MyApplication" parent="android:Theme.Material.Light.NoActionBar" />
-    <style name="Theme.Calfit.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/splash_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_calfit_logo</item>
-        <item name="postSplashScreenTheme">@style/Theme.MyApplication</item>
-        <item name="android:statusBarColor">@color/splash_background</item>
-        <item name="android:navigationBarColor">@color/splash_background</item>
-        <item name="android:windowLightStatusBar">false</item>
-    </style>
 </resources>

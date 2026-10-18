@@ -23,5 +23,7 @@ data class FoodItemEntity(
     val barcode: String? = null,
     val isCustom: Boolean = false,
     val isFavorite: Boolean = false,
-    @ColumnInfo(defaultValue = "1") val nutritionKnown: Boolean = true
+    @ColumnInfo(defaultValue = "1") val nutritionKnown: Boolean = true,
+    @ColumnInfo(defaultValue = "'local'") val source: String = "local",
+    @ColumnInfo(defaultValue = "0") val cachedAtMillis: Long = 0
 )

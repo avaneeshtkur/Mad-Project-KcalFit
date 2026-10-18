@@ -31,22 +31,7 @@ import com.kcalfit.app.ui.nakafit.*
 @Composable
 fun WelcomeScreen(onNavigateToLogin: () -> Unit, onNavigateToRegister: () -> Unit,
     onNavigateToGoogle: () -> Unit = {}, modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxSize()) {
-        NakaPhoto(R.drawable.nakafit_runner, "Runner on an athletics track", Modifier.fillMaxSize())
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .1f), Color.Black.copy(alpha = .92f)))))
-        Column(Modifier.fillMaxSize().padding(24.dp).navigationBarsPadding(), verticalArrangement = Arrangement.Bottom) {
-            Text("Calfit", color = Color.White, fontSize = 44.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(16.dp))
-            Text("A healthier you,\none day at a time.", color = Color.White, fontSize = 31.sp, lineHeight = 37.sp)
-            Spacer(Modifier.height(12.dp))
-            Text("Move with purpose. Track your progress.", color = Color.White.copy(alpha = .72f), fontSize = 14.sp)
-            Spacer(Modifier.height(30.dp))
-            NakaButton("Get Started", onNavigateToRegister)
-            Spacer(Modifier.height(10.dp))
-            OutlinedButton(onNavigateToLogin, Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(30.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) { Text("I already have an account") }
-        }
-    }
+    com.kcalfit.app.ui.reference.ReferenceWelcome(onNavigateToLogin, onNavigateToRegister, modifier)
 }
 
 @Composable
@@ -57,7 +42,7 @@ private fun AuthPhotoShell(title: String, subtitle: String, image: Int, modifier
             NakaPhoto(image, "Fitness studio", Modifier.fillMaxSize())
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .8f)))))
             Column(Modifier.align(Alignment.BottomStart).padding(24.dp)) {
-                Text("Calfit", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                Text("kcalfit", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(10.dp))
                 Text(title, color = Color.White, fontSize = 30.sp, lineHeight = 35.sp)
             }
@@ -87,7 +72,7 @@ private fun AuthField(label: String, value: String, onChange: (String) -> Unit,
 @Composable
 fun LoginScreen(onLoginSuccess: (String, String, Boolean) -> Unit, onNavigateToRegister: () -> Unit,
     onNavigateToForgotPassword: () -> Unit, errorMessage: String? = null, isLoading: Boolean = false,
-    modifier: Modifier = Modifier) {
+    onGoogleSignIn: () -> Unit = {}, modifier: Modifier = Modifier) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var saveWithManager by rememberSaveable { mutableStateOf(false) }
@@ -116,7 +101,7 @@ fun LoginScreen(onLoginSuccess: (String, String, Boolean) -> Unit, onNavigateToR
             Checkbox(saveWithManager, { saveWithManager = it })
             Text("Save with password manager", color = MaterialTheme.colorScheme.onSurface)
         }
-        Text("Your password manager stores the password. Calfit keeps your signed-in session.",
+        Text("Your password manager stores the password. kcalfit keeps your signed-in session.",
             color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
         TextButton(onNavigateToForgotPassword, Modifier.align(Alignment.End)) { Text("Forgot password?", color = MaterialTheme.colorScheme.onSurface) }
         (errorMessage ?: error)?.let { Text(it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp) }
@@ -127,8 +112,10 @@ fun LoginScreen(onLoginSuccess: (String, String, Boolean) -> Unit, onNavigateToR
                 else -> onLoginSuccess(email.trim(), password, saveWithManager)
             }
         }, enabled = !isLoading)
+        OutlinedButton(onGoogleSignIn, Modifier.fillMaxWidth().height(50.dp), enabled = !isLoading,
+            shape = RoundedCornerShape(28.dp)) { Text("Continue with Google") }
         Row(Modifier.align(Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
-            Text("New to Calfit?", color = Naka.Muted, fontSize = 13.sp)
+            Text("New to kcalfit?", color = Naka.Muted, fontSize = 13.sp)
             TextButton(onNavigateToRegister) { Text("Sign Up", color = Naka.Violet) }
         }
     }
@@ -136,13 +123,13 @@ fun LoginScreen(onLoginSuccess: (String, String, Boolean) -> Unit, onNavigateToR
 
 @Composable
 fun RegisterScreen(onRegisterSuccess: (String, String, String) -> Unit, onNavigateToLogin: () -> Unit,
-    errorMessage: String? = null, isLoading: Boolean = false, modifier: Modifier = Modifier) {
+    errorMessage: String? = null, isLoading: Boolean = false, onGoogleSignIn: () -> Unit = {}, modifier: Modifier = Modifier) {
     var name by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
-    AuthPhotoShell("Create your account", "Start building healthy habits with Calfit.", R.drawable.nakafit_gym_motivation, modifier) {
+    AuthPhotoShell("Create your account", "Start building healthy habits with kcalfit.", R.drawable.nakafit_gym_motivation, modifier) {
         AuthField("Full name", name, { name = it; error = null })
         AuthField("Email address", email, { email = it; error = null }, type = KeyboardType.Email)
         AuthField("Password", password, { password = it; error = null }, true, KeyboardType.Password)
@@ -157,10 +144,36 @@ fun RegisterScreen(onRegisterSuccess: (String, String, String) -> Unit, onNaviga
                 else -> onRegisterSuccess(name.trim(), email.trim(), password)
             }
         }, enabled = !isLoading)
+        OutlinedButton(onGoogleSignIn, Modifier.fillMaxWidth().height(50.dp), enabled = !isLoading,
+            shape = RoundedCornerShape(28.dp)) { Text("Continue with Google") }
         Row(Modifier.align(Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
             Text("Already have an account?", color = Naka.Muted, fontSize = 13.sp)
             TextButton(onNavigateToLogin) { Text("Sign In", color = Naka.Violet) }
         }
+    }
+}
+
+@Composable
+fun ResetPasswordScreen(onSubmit: (String, (String?) -> Unit) -> Unit, onBack: () -> Unit,
+    modifier: Modifier = Modifier) {
+    var password by remember { mutableStateOf("") }
+    var confirm by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(false) }
+    NakaPage("Choose a new password", onBack) {
+        Spacer(Modifier.height(24.dp))
+        Text("Secure your account", color = MaterialTheme.colorScheme.onSurface, fontSize = 26.sp)
+        Text("Choose a new password to finish resetting your account.", color = Naka.Muted)
+        AuthField("New password", password, { password = it; error = null }, true, KeyboardType.Password)
+        AuthField("Confirm new password", confirm, { confirm = it; error = null }, true, KeyboardType.Password)
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        NakaButton(if (loading) "Updating…" else "Update Password", {
+            when {
+                password.length < 6 -> error = "Use at least 6 characters for your password"
+                password != confirm -> error = "Passwords do not match"
+                else -> { loading = true; onSubmit(password) { result -> loading = false; error = result } }
+            }
+        }, enabled = !loading)
     }
 }
 

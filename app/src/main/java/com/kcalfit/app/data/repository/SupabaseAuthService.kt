@@ -6,11 +6,13 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 
 /** Supabase Auth's public REST API. No service-role key or local OTP is used. */
 class SupabaseAuthService {
     class AuthHttpException(val status: Int, message: String) : IllegalStateException(message)
     data class Session(val userId: String, val email: String, val name: String, val accessToken: String, val refreshToken: String, val metadata: JSONObject)
+    companion object { const val APP_AUTH_REDIRECT = "com.kcalfit.app://auth/callback" }
 
     private val baseUrl get() = BuildConfig.SUPABASE_URL.trimEnd('/')
     private val key get() = BuildConfig.SUPABASE_PUBLISHABLE_KEY
@@ -25,13 +27,13 @@ class SupabaseAuthService {
             requestMethod = method
             connectTimeout = 15000
             readTimeout = 15000
-            doOutput = true
+            doOutput = method != "GET"
             setRequestProperty("apikey", key)
             setRequestProperty("Content-Type", "application/json")
             if (accessToken != null) setRequestProperty("Authorization", "Bearer $accessToken")
         }
         try {
-            connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+            if (method != "GET") connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
             val stream = if (connection.responseCode in 200..299) connection.inputStream else connection.errorStream
             val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
             val json = if (response.isBlank()) JSONObject() else JSONObject(response)
@@ -47,7 +49,10 @@ class SupabaseAuthService {
     }
 
     suspend fun register(name: String, email: String, password: String) {
-        val response = post("signup", JSONObject().put("email", email).put("password", password).put("data", JSONObject().put("name", name)))
+        val response = post(
+            "signup?redirect_to=${encode(APP_AUTH_REDIRECT)}",
+            JSONObject().put("email", email).put("password", password).put("data", JSONObject().put("name", name))
+        )
         // Supabase can deliberately obfuscate an already registered account. With
         // email confirmation enabled, a duplicate has an empty identities array.
         val user = response.optJSONObject("user") ?: response
@@ -65,7 +70,20 @@ class SupabaseAuthService {
     }
 
     suspend fun requestPasswordReset(email: String) {
-        post("recover", JSONObject().put("email", email))
+        post("recover?redirect_to=${encode(APP_AUTH_REDIRECT)}", JSONObject().put("email", email))
+    }
+
+    fun googleAuthorizationUrl(): String = "$baseUrl/auth/v1/authorize?provider=google&redirect_to=${encode(APP_AUTH_REDIRECT)}"
+
+    suspend fun sessionFromOAuthTokens(accessToken: String, refreshToken: String): Session {
+        val user = request("GET", "user", JSONObject(), accessToken)
+        val metadata = user.optJSONObject("user_metadata") ?: JSONObject()
+        return Session(user.getString("id"), user.optString("email"),
+            metadata.optString("name", metadata.optString("full_name")), accessToken, refreshToken, metadata)
+    }
+
+    suspend fun updatePassword(accessToken: String, newPassword: String) {
+        request("PUT", "user", JSONObject().put("password", newPassword), accessToken)
     }
 
     suspend fun login(email: String, password: String): Session = session(
@@ -103,4 +121,6 @@ class SupabaseAuthService {
             metadata = user.optJSONObject("user_metadata") ?: JSONObject()
         )
     }
+
+    private fun encode(value: String) = URLEncoder.encode(value, Charsets.UTF_8.name())
 }

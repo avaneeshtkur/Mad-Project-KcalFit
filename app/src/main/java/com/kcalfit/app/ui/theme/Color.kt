@@ -9,14 +9,14 @@ object KcalFitColors {
     val SurfaceVariant = Color(0xFFF8F8FA)
     val Ink = Color(0xFF0F0F0F)
     val InkMuted = Color(0xFF818AA0)
-    val Lime = Color(0xFF6500F5)
+    val Lime = Color(0xFF0066EE)
     val Orange = Color(0xFFFF592D)
-    val Error = Color(0xFFB3261E)
+    val Error = Color(0xFFDB471E)
 }
 
 val LightPrimary = KcalFitColors.Lime
 val LightOnPrimary = Color.White
-val LightPrimaryContainer = Color(0xFFE0CEFF)
+val LightPrimaryContainer = Color(0xFFCAE3FF)
 val LightOnPrimaryContainer = KcalFitColors.Ink
 val LightSecondary = KcalFitColors.Ink
 val LightSecondaryContainer = KcalFitColors.SurfaceVariant
@@ -31,10 +31,10 @@ val LightOnSurfaceVariant = KcalFitColors.InkMuted
 val LightOutline = Color(0xFFE7EAF1)
 val LightError = KcalFitColors.Error
 
-val DarkPrimary = Color(0xFFBE9AFF)
-val DarkOnPrimary = Color(0xFF29104E)
-val DarkPrimaryContainer = Color(0xFF382052)
-val DarkOnPrimaryContainer = Color(0xFFE0CEFF)
+val DarkPrimary = Color(0xFF8ABEFF)
+val DarkOnPrimary = Color(0xFF002D6B)
+val DarkPrimaryContainer = Color(0xFF143B6B)
+val DarkOnPrimaryContainer = Color(0xFFCAE3FF)
 val DarkSecondary = KcalFitColors.Canvas
 val DarkSecondaryContainer = Color(0xFF30302D)
 val DarkOnSecondaryContainer = KcalFitColors.Canvas

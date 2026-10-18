@@ -1,6 +1,7 @@
 package com.kcalfit.app.domain.calculator
 
 import com.kcalfit.app.data.model.FoodEntry
+import com.kcalfit.app.data.model.FoodItemEntity
 import com.kcalfit.app.data.model.MealType
 import java.time.LocalDate
 import java.time.DayOfWeek
@@ -9,6 +10,15 @@ import kotlin.math.roundToInt
 
 data class FoodTotals(val calories: Int, val protein: Double, val carbs: Double, val fat: Double, val missingMacros: Int)
 object FoodDiaryRules {
+    fun fromCatalog(food: FoodItemEntity, amount: Double, quantityLabel: String, meal: MealType, date: String): FoodEntry {
+        val factor = multiplier(amount, food.servingSize)
+        return FoodEntry(foodName = food.name, brand = food.brand, mealType = meal.displayName,
+            calories = calories(food.calories, factor), proteinGrams = food.proteinGrams * factor,
+            carbsGrams = food.carbsGrams * factor, fatGrams = food.fatGrams * factor,
+            fiberGrams = food.fiberGrams * factor, sugarGrams = food.sugarGrams * factor,
+            sodiumMg = food.sodiumMg * factor, quantity = quantityLabel, date = date,
+            nutritionKnown = food.nutritionKnown).also(::validate)
+    }
     fun totals(entries: List<FoodEntry>) = FoodTotals(entries.sumOf { it.calories },
         entries.sumOf { it.proteinGrams }, entries.sumOf { it.carbsGrams }, entries.sumOf { it.fatGrams },
         entries.count { !it.nutritionKnown })

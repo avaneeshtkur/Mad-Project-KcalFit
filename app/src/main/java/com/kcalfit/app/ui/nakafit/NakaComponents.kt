@@ -39,11 +39,11 @@ import kotlin.math.roundToInt
 
 object Naka {
     val Ink = Color(0xFF101014)
-    val Violet = Color(0xFF6500F5)
+    val Violet = com.kcalfit.app.ui.reference.ReferenceStyle.Blue
     val Muted = Color(0xFF818AA0)
     val Pale: Color @Composable get() = MaterialTheme.colorScheme.surfaceVariant
     val Line: Color @Composable get() = MaterialTheme.colorScheme.outline
-    val Lavender = Color(0xFFE0CEFF)
+    val Lavender = Color(0xFFCAE3FF)
     val Lime = Color(0xFFF1FFD2)
     val Pink = Color(0xFFF9DAE0)
 }

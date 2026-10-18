@@ -86,31 +86,11 @@ fun HomeScreen(uiState: CalFitUiState, onAddFoodClick: (MealType?) -> Unit, onDe
             }
         }
         item {
-            val distanceToday = uiState.exerciseEntries.sumOf { it.distanceKm.takeIf(Double::isFinite)?.coerceAtLeast(0.0) ?: 0.0 }
-            val durationToday = uiState.exerciseEntries.sumOf { it.durationMinutes.coerceAtLeast(0) }
-            NakaSection("Today’s activity", "See Details", onOpenTrack)
+            NakaSection("Health Overview", "See Details", onOpenTrack)
+            Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                HomeMetric("Calories burnt", "${uiState.caloriesBurned}", "kcal", Icons.Default.LocalFireDepartment, Modifier.weight(1f), onOpenTrack)
-                HomeMetric("Distance", if (distanceToday > 0) String.format(java.util.Locale.getDefault(), "%.2f", distanceToday) else "—", "km", Icons.AutoMirrored.Filled.DirectionsRun, Modifier.weight(1f), onOpenTrack)
-            }
-            Surface(Modifier.fillMaxWidth().clickable(onClick = onOpenTrack), color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(16.dp)) {
-                Row(Modifier.padding(horizontal = 16.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Timer, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(19.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Text("Workout time", Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-                    Text("$durationToday min", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall)
-                }
-            }
-        }
-        item {
-            NakaSection("Nutrition", "Open diary", onOpenBreakfast)
-            Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surface) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
-                    MacroProgressRow("Protein", uiState.totalProteinGrams, uiState.targetProteinGrams, MaterialTheme.colorScheme.primary)
-                    MacroProgressRow("Carbs", uiState.totalCarbsGrams, uiState.targetCarbsGrams, MaterialTheme.colorScheme.tertiary)
-                    MacroProgressRow("Fat", uiState.totalFatGrams, uiState.targetFatGrams, MaterialTheme.colorScheme.secondary)
-                }
+                HomeMetric("Calories\nBurnt", "${uiState.caloriesBurned}", "kCal", Icons.Default.LocalFireDepartment, Modifier.weight(1f), onOpenTrack)
+                HomeMetric("Distance\nCovered", "—", "km", Icons.AutoMirrored.Filled.DirectionsRun, Modifier.weight(1f), onOpenTrack)
             }
         }
         item {
@@ -123,25 +103,14 @@ fun HomeScreen(uiState: CalFitUiState, onAddFoodClick: (MealType?) -> Unit, onDe
             HomeExercise("Morning Run", "30 minutes", Naka.Pink, R.drawable.nakafit_runner, { onWorkout("run") })
         }
         item {
+            NakaSection("Your Nutrition", "See Details", onOpenBreakfast)
+            NakaPhotoCard("Track Your Nutrition", "Monitor calories and macros", R.drawable.nakafit_food, onOpenBreakfast, height = 180)
+        }
+        item {
             NakaSection("Daily Goals", "Add Goals", onOpenGoals)
             NakaRow("Daily calorie target", "${uiState.totalCalories} / ${uiState.dailyGoal} kcal", { editGoal = true })
             MealDiarySection(uiState, onMeal, { onAddFoodClick(it) }, onFood, onDeleteEntry)
         }
-    }
-}
-
-@Composable
-private fun MacroProgressRow(label: String, value: Double, target: Int, tint: Color) {
-    val safeTarget = target.coerceAtLeast(1)
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(label, Modifier.width(64.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        LinearProgressIndicator(
-            progress = { (value / safeTarget).toFloat().coerceIn(0f, 1f) },
-            modifier = Modifier.weight(1f).height(7.dp),
-            color = tint,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-        Text("${value.toInt()} / $safeTarget g", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 

@@ -4,6 +4,11 @@ import android.app.Application
 import com.kcalfit.app.data.local.AppDatabase
 import com.kcalfit.app.data.preferences.UserPreferences
 import com.kcalfit.app.data.repository.FoodRepository
+import com.kcalfit.app.data.importer.FoodAssetImporter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class CalFitApplication : Application() {
 
@@ -22,6 +27,10 @@ class CalFitApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            FoodAssetImporter.importIfNeeded(this@CalFitApplication, database.foodItemDao())
+            repository.foodSearch.invalidate()
+        }
     }
 
     companion object {

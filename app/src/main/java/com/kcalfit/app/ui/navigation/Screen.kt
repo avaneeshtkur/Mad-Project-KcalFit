@@ -28,6 +28,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object Register : Screen("register", "Register", Icons.Default.PersonAdd)
     object EmailVerification : Screen("email_verification", "Verify Email", Icons.Default.MarkEmailRead)
     object ForgotPassword : Screen("forgot_password", "Forgot Password", Icons.Default.Lock)
+    object ResetPassword : Screen("reset_password", "Choose Password", Icons.Default.Lock)
     
     // Onboarding
     object Onboarding : Screen("onboarding", "Setup", Icons.Default.Tune)
@@ -51,10 +52,11 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object BarcodeLookup : Screen("barcode_lookup", "Barcode Lookup", Icons.Default.Search)
     object MealDetail : Screen("meal_detail/{id}", "Meal Detail", Icons.Default.PieChart)
     
+    object Diary : Screen("diary", "Diary", Icons.Default.EventNote)
     object Track : Screen("track", "Track", Icons.Default.TrackChanges)
     object Insight : Screen("insight", "Insight", Icons.Default.History)
 
     companion object {
-        val bottomNavItems = listOf(Home, Track, Nutrition, Insight, Profile)
+        val bottomNavItems = listOf(Home, Diary, Profile)
     }
 }

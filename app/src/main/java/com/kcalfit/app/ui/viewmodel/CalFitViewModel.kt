@@ -38,11 +38,6 @@ import com.kcalfit.app.domain.calculator.FoodDiaryRules
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
@@ -85,7 +80,8 @@ data class CalFitUiState(
     val searchQuery: String = "",
     val selectedMealTypeFilter: String? = null,
     val foodSearchLoading: Boolean = false,
-    val foodSearchError: String? = null
+    val foodSearchError: String? = null,
+    val foodSearchState: FoodSearchUiState = FoodSearchUiState.Idle
 )
 
 fun getTodayDateString(): String {
@@ -93,7 +89,7 @@ fun getTodayDateString(): String {
     return dateFormat.format(Date())
 }
 
-@OptIn(ExperimentalCoroutinesApi::class, kotlinx.coroutines.FlowPreview::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 class CalFitViewModel(
     private val repository: FoodRepository
 ) : ViewModel() {
@@ -107,8 +103,10 @@ class CalFitViewModel(
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
-    private val _foodSearchLoading = MutableStateFlow(false)
-    private val _foodSearchError = MutableStateFlow<String?>(null)
+    private val foodSearchEngine = FoodSearchEngine(
+        scope = viewModelScope,
+        source = repository.foodSearch
+    )
 
     private val _selectedMealTypeFilter = MutableStateFlow<String?>(null)
     val selectedMealTypeFilter: StateFlow<String?> = _selectedMealTypeFilter.asStateFlow()
@@ -130,20 +128,9 @@ class CalFitViewModel(
     val waterIntakeFlow = _selectedDate.flatMapLatest { date -> repository.getTotalWaterForDate(date) }
     val latestWeightFlow = repository.getLatestWeight()
     val activeFastingFlow = repository.getActiveFastingSession()
-    val masterFoodSearchFlow = _searchQuery
-        .debounce(350)
-        .map { it.trim() }
-        .distinctUntilChanged()
-        .flatMapLatest { query ->
-            repository.searchLiveFoods(query)
-                .onStart { _foodSearchLoading.value = query.length >= 2; _foodSearchError.value = null }
-                .onEach { _foodSearchLoading.value = false }
-                .catch {
-                    _foodSearchLoading.value = false
-                    _foodSearchError.value = "Food search is unavailable. Check your connection or use manual entry."
-                    emit(repository.searchCachedApiFoods(query).first())
-                }
-        }
+    val masterFoodSearchFlow = foodSearchEngine.state.map { state ->
+        state.foods
+    }
     val coachMessagesFlow = repository.getCoachMessages()
     val recipesFlow = repository.getAllRecipes()
     val friendsFlow = repository.getFriendsList()
@@ -248,8 +235,10 @@ class CalFitViewModel(
     }
 
     // Final UI State flow
+    private val stateWithFasting = combine(primaryStateFlow, activeFastingFlow) { state, fast -> state.copy(activeFastingSession = fast) }
+
     private val enrichedState = combine(
-        primaryStateFlow,
+        stateWithFasting,
         allEntriesFlow,
         masterFoodSearchFlow,
         coachMessagesFlow,
@@ -262,9 +251,13 @@ class CalFitViewModel(
             recipesList = recipes
         )
     }
-    val uiState: StateFlow<CalFitUiState> = combine(enrichedState, repository.getAllExerciseEntries(), _searchQuery, _selectedMealTypeFilter) { state, workouts, query, filter ->
+    val uiState: StateFlow<CalFitUiState> = combine(
+        enrichedState, repository.getAllExerciseEntries(), _searchQuery, _selectedMealTypeFilter, foodSearchEngine.state
+    ) { state, workouts, query, filter, foodSearch ->
         state.copy(allExerciseEntries = workouts, searchQuery = query, selectedMealTypeFilter = filter,
-            foodSearchLoading = _foodSearchLoading.value, foodSearchError = _foodSearchError.value)
+            foodSearchLoading = foodSearch is FoodSearchUiState.Loading || foodSearch is FoodSearchUiState.Refreshing,
+            foodSearchError = (foodSearch as? FoodSearchUiState.Error)?.message,
+            foodSearchState = foodSearch)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -272,8 +265,18 @@ class CalFitViewModel(
     )
 
     // Actions
+    private var changingFast = false
+    fun toggleFasting() {
+        if (changingFast) return
+        changingFast = true
+        viewModelScope.launch { try { if(repository.getActiveFastingSession().first() == null) repository.startFasting("16:8",16) else repository.finishFasting() } finally { changingFast = false } }
+    }
     fun setSelectedDate(date: String) { _selectedDate.value = date }
-    fun setSearchQuery(query: String) { _searchQuery.value = query }
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+        foodSearchEngine.setQuery(query)
+    }
+    fun retryFoodSearch() = foodSearchEngine.retry()
     fun setMealTypeFilter(filter: String?) { _selectedMealTypeFilter.value = filter }
 
     fun updateLocalProfile(name: String? = null, height: Double? = null, weight: Double? = null) {
@@ -336,6 +339,27 @@ class CalFitViewModel(
         }
     }
 
+    fun googleSignInUrl(): String = authService.googleAuthorizationUrl()
+
+    fun finishGoogleSignIn(accessToken: String, refreshToken: String, onResult: (String?, Boolean) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val onboarded = acceptSession(authService.sessionFromOAuthTokens(accessToken, refreshToken))
+                onResult(null, onboarded)
+            } catch (e: Exception) { onResult(e.message ?: "Could not complete Google sign-in", false) }
+        }
+    }
+
+    fun finishPasswordReset(accessToken: String, refreshToken: String, password: String, onResult: (String?, Boolean) -> Unit) {
+        viewModelScope.launch {
+            try {
+                authService.updatePassword(accessToken, password)
+                val onboarded = acceptSession(authService.sessionFromOAuthTokens(accessToken, refreshToken))
+                onResult(null, onboarded)
+            } catch (e: Exception) { onResult(e.message ?: "Could not update password", false) }
+        }
+    }
+
     private suspend fun acceptSession(session: SupabaseAuthService.Session): Boolean {
         coachJob?.cancelAndJoin()
         coach.reset()
@@ -394,7 +418,9 @@ class CalFitViewModel(
             val activity = ActivityLevel.entries.firstOrNull { it.name.equals(activityLevelStr, ignoreCase = true) } ?: ActivityLevel.MODERATELY_ACTIVE
             val goal = FitnessGoal.entries.firstOrNull { it.name.equals(goalStr, ignoreCase = true) } ?: FitnessGoal.LOSE_WEIGHT
 
-            val calc = BmrCalculator.computeFullProfile(weightKg, heightCm, age, sex, activity, goal)
+            val draft = com.kcalfit.app.ui.reference.SetupStore(CalFitApplication.instance).pending()
+            val weekly = if (draft.email.equals(preferences.getUserEmail(), true)) draft.weekly else .5
+            val calc = BmrCalculator.computeFullProfile(weightKg, heightCm, age, sex, activity, goal, weekly)
             val macros = MacroCalculator.calculateMacros(calc.dailyCalorieTarget)
 
             val existing = repository.getUserProfile() ?: return@launch
@@ -410,6 +436,8 @@ class CalFitViewModel(
                 activityLevel = activity.name,
                 fitnessGoal = goal.name,
                 exerciseDaysPerWeek = exerciseDaysPerWeek,
+                weeklyTargetKg = weekly,
+                units = if(draft.metric) "METRIC" else "IMPERIAL",
                 dailyCalorieGoal = calc.dailyCalorieTarget,
                 targetProteinGrams = macros.proteinGrams,
                 targetCarbsGrams = macros.carbsGrams,
@@ -419,6 +447,7 @@ class CalFitViewModel(
             repository.saveUserProfile(updatedUser)
             repository.setCalorieGoal(calc.dailyCalorieTarget)
             _onboardingResult.value = calc
+            com.kcalfit.app.ui.reference.SetupStore(CalFitApplication.instance).complete(preferences.getAuthUserId(), draft)
             try {
                 authService.updateProfile(
                     preferences.getRefreshToken(),
@@ -433,6 +462,8 @@ class CalFitViewModel(
                         .put("activity_level", activity.name)
                         .put("fitness_goal", goal.name)
                         .put("exercise_days_per_week", exerciseDaysPerWeek)
+                        .put("weekly_target_kg", weekly)
+                        .put("onboarding_preferences", JSONObject(draft.json()))
                         .put("daily_calorie_goal", calc.dailyCalorieTarget),
                     onRefreshed = { preferences.saveAuthSession(it.userId, it.refreshToken) }
                 )

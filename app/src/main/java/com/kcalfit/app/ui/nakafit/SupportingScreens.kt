@@ -114,7 +114,11 @@ fun CoachProfileScreen(index: Int, onBack: () -> Unit, onWorkout: (String) -> Un
 
 @Composable
 fun KcalFitProfileScreen(uiState: CalFitUiState, navigate: (String) -> Unit, onLogout: () -> Unit) {
-    NakaPage("Profile") {
+    NakaPage("More") {
+        NakaRow("Track", "Activity, steps and daily goals", { navigate(Screen.Track.route) })
+        NakaRow("Nutrition", "Calories, nutrients and macros", { navigate(Screen.Nutrition.route) })
+        NakaRow("Insight", "Your progress over time", { navigate(Screen.Insight.route) })
+        NakaRow("Automatic steps", "Connect Health Connect or a device sensor", { navigate("health_connect") })
         Box(Modifier.fillMaxWidth().height(150.dp), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(progress = { .75f }, Modifier.size(130.dp), color = Naka.Violet, trackColor = Naka.Pale, strokeWidth = 5.dp)
             Surface(Modifier.size(100.dp).clickable { navigate(NakaRoutes.ProfileInfo) }, shape = CircleShape, color = Naka.Lavender) {
@@ -174,7 +178,7 @@ fun NotificationSettingsScreen(onBack: () -> Unit, darkMode: Boolean, onDarkMode
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Dark mode", color = textColor)
-                Text(if (darkMode) "Use the dark Calfit palette" else "Use the light Calfit palette", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                Text(if (darkMode) "Use the dark kcalfit palette" else "Use the light kcalfit palette", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
             }
             Switch(checked = darkMode, onCheckedChange = onDarkMode,
                 colors = SwitchDefaults.colors(checkedTrackColor = Naka.Violet))
@@ -271,8 +275,8 @@ fun SettingsScreen(onBack: () -> Unit, darkMode: Boolean, onDarkMode: (Boolean) 
         Row(verticalAlignment = Alignment.CenterVertically) { Text("Metric units", Modifier.weight(1f)); Switch(metric, { metric = it }) }
         Text(if (metric) "Centimeters and kilograms" else "Imperial preference selected", color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(verticalAlignment = Alignment.CenterVertically) { Text("Dark mode", Modifier.weight(1f)); Switch(darkMode, onDarkMode) }
-        Text("Appearance is applied throughout Calfit.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-        Text("Calfit · Version 1.0", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Appearance is applied throughout kcalfit.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+        Text("kcalfit · Version 1.0", color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

@@ -1,5 +1,7 @@
 package com.kcalfit.app.ui.navigation
 
+import com.kcalfit.app.ui.reference.*
+import android.content.Intent
 import android.net.Uri
 import com.kcalfit.app.domain.chatbot.CoachDestination
 
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
@@ -39,7 +42,8 @@ import com.kcalfit.app.ui.chatbot.ChatbotScreen
 
 @Composable
 fun NavGraph(navController: NavHostController, viewModel: CalFitViewModel, userPreferences: UserPreferences,
-    darkMode: Boolean = false, onDarkModeChange: (Boolean) -> Unit = {}, modifier: Modifier = Modifier) {
+    darkMode: Boolean = false, onDarkModeChange: (Boolean) -> Unit = {}, modifier: Modifier = Modifier,
+    authCallbackUri: Uri? = null, onAuthCallbackHandled: () -> Unit = {}) {
     val uiState by viewModel.uiState.collectAsState()
     val authReady by viewModel.authReady.collectAsState()
     val authenticated by viewModel.authenticated.collectAsState()
@@ -50,6 +54,9 @@ fun NavGraph(navController: NavHostController, viewModel: CalFitViewModel, userP
     var addFoodMeal by rememberSaveable { mutableStateOf(MealType.BREAKFAST) }
     var selectedCatalogueFood by remember { mutableStateOf<FoodItemEntity?>(null) }
     var foodMutationError by remember { mutableStateOf<String?>(null) }
+    var recoveryAccessToken by remember { mutableStateOf<String?>(null) }
+    var recoveryRefreshToken by remember { mutableStateOf("") }
+    var authCallbackPending by remember { mutableStateOf(authCallbackUri != null) }
     var chatX by rememberSaveable { mutableFloatStateOf(0f) }
     var chatY by rememberSaveable { mutableFloatStateOf(.92f) }
 
@@ -66,18 +73,64 @@ fun NavGraph(navController: NavHostController, viewModel: CalFitViewModel, userP
     fun logExercise(name: String, category: String, duration: Int, calories: Int) { viewModel.logExercise(name, category, duration, calories) }
     fun updateGoal(goal: Int) { viewModel.updateCalorieGoal(goal) }
     fun deleteFood(food: FoodEntry) { viewModel.removeFoodEntry(food) { foodMutationError = it } }
+    fun launchGoogle() {
+        try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(viewModel.googleSignInUrl()))) }
+        catch (_: Exception) { android.widget.Toast.makeText(context, "Could not open Google sign-in. Check that a browser is installed.", android.widget.Toast.LENGTH_LONG).show() }
+    }
+
+    LaunchedEffect(authCallbackUri) {
+        val callback = authCallbackUri ?: return@LaunchedEffect
+        authCallbackPending = true
+        onAuthCallbackHandled()
+        val fragment = callback.fragment.orEmpty()
+        val tokenData = Uri.parse("calfit://callback/?$fragment")
+        val access = tokenData.getQueryParameter("access_token")
+            ?: callback.getQueryParameter("access_token").orEmpty()
+        val refresh = tokenData.getQueryParameter("refresh_token")
+            ?: callback.getQueryParameter("refresh_token").orEmpty()
+        val callbackType = tokenData.getQueryParameter("type") ?: callback.getQueryParameter("type")
+        val callbackError = tokenData.getQueryParameter("error_description")
+            ?: callback.getQueryParameter("error_description")
+            ?: tokenData.getQueryParameter("error")
+            ?: callback.getQueryParameter("error")
+        if (!callbackError.isNullOrBlank()) {
+            android.widget.Toast.makeText(context, callbackError.replace('+', ' '), android.widget.Toast.LENGTH_LONG).show()
+            authCallbackPending = false
+            navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true }; launchSingleTop = true }
+        } else if (access.isNotBlank() && refresh.isNotBlank() && callbackType == "recovery") {
+            recoveryAccessToken = access
+            recoveryRefreshToken = refresh
+            authCallbackPending = false
+            navController.navigate(Screen.ResetPassword.route) { popUpTo(0) { inclusive = true }; launchSingleTop = true }
+        } else if (access.isNotBlank() && refresh.isNotBlank()) {
+            viewModel.finishGoogleSignIn(access, refresh) { error, onboarded ->
+                authCallbackPending = false
+                if (error == null) navController.navigate(if (onboarded) Screen.Home.route else Screen.Onboarding.route) {
+                    popUpTo(0) { inclusive = true }; launchSingleTop = true
+                } else {
+                    android.widget.Toast.makeText(context, error, android.widget.Toast.LENGTH_LONG).show()
+                    authCallbackPending = false
+                    navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true }; launchSingleTop = true }
+                }
+            }
+        } else {
+            android.widget.Toast.makeText(context, "The authentication link is incomplete or expired. Request a new link and try again.", android.widget.Toast.LENGTH_LONG).show()
+            authCallbackPending = false
+            navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true }; launchSingleTop = true }
+        }
+    }
 
     val currentRoute = entry?.destination?.route
     LaunchedEffect(authReady, authenticated, currentRoute) {
         val publicRoutes = setOf(Screen.Splash.route, Screen.Welcome.route, Screen.Login.route,
             Screen.Register.route, Screen.EmailVerification.route, Screen.ForgotPassword.route)
-        if (authReady && !authenticated && currentRoute != null && currentRoute !in publicRoutes) {
+        if (authReady && !authenticated && !authCallbackPending && currentRoute != null && currentRoute !in publicRoutes) {
             navController.navigate(Screen.Welcome.route) { popUpTo(0) { inclusive = true }; launchSingleTop = true }
         }
     }
     val bottomRoutes = Screen.bottomNavItems.map { it.route }.toSet()
     val showChatbot = currentRoute in setOf(
-        Screen.Home.route, Screen.Track.route, Screen.Nutrition.route, Screen.Insight.route,
+        Screen.Track.route, Screen.Insight.route,
         Screen.Profile.route, Screen.Exercise.route, NakaRoutes.Progress, NakaRoutes.HealthSummary,
         NakaRoutes.Coaches
     )
@@ -86,7 +139,7 @@ fun NavGraph(navController: NavHostController, viewModel: CalFitViewModel, userP
         Box(Modifier.fillMaxSize().padding(padding)) {
         NavHost(navController, startDestination = Screen.Splash.route, modifier = Modifier.fillMaxSize()) {
             composable(Screen.Splash.route) {
-                SplashScreen(uiState.userProfile, authReady, { target -> navController.navigate(target) { popUpTo(Screen.Splash.route) { inclusive = true } } })
+                SplashScreen(uiState.userProfile, authReady && !authCallbackPending, { target -> navController.navigate(target) { popUpTo(Screen.Splash.route) { inclusive = true } } })
             }
             composable(Screen.Welcome.route) {
                 WelcomeScreen(onNavigateToLogin = { navigate(Screen.Login.route) }, onNavigateToRegister = { navigate(Screen.Register.route) })
@@ -109,15 +162,17 @@ fun NavGraph(navController: NavHostController, viewModel: CalFitViewModel, userP
                             navController.navigate(if (onboarded) Screen.Home.route else Screen.Onboarding.route) { popUpTo(Screen.Welcome.route) { inclusive = true } }
                         } else { loading = false; error = result }
                     }
-                }, onNavigateToRegister = { navigate(Screen.Register.route) }, onNavigateToForgotPassword = { navigate(Screen.ForgotPassword.route) }, errorMessage = error, isLoading = loading)
+                }, onNavigateToRegister = { navigate(Screen.Register.route) }, onNavigateToForgotPassword = { navigate(Screen.ForgotPassword.route) }, errorMessage = error, isLoading = loading,
+                    onGoogleSignIn = { launchGoogle() })
             }
             composable(Screen.Register.route) {
                 var error by remember { mutableStateOf<String?>(null) }
                 var loading by remember { mutableStateOf(false) }
-                RegisterScreen(onRegisterSuccess = { name, email, password ->
+                ReferenceSignup(onRegister = { name, email, password ->
                     loading = true; error = null
                     viewModel.registerUser(name,email,password) { result -> loading = false; if (result == null) { navigate(Screen.EmailVerification.route) } else error = result }
-                }, onNavigateToLogin = { navigate(Screen.Login.route) }, errorMessage = error, isLoading = loading)
+                }, onBack = { back() }, errorMessage = error, isLoading = loading,
+                    onGoogle = { launchGoogle() })
             }
             composable(Screen.EmailVerification.route) {
                 EmailVerificationScreen(pendingEmail.ifBlank { userPreferences.getUserEmail() }, viewModel::verifyEmailCode,
@@ -125,6 +180,22 @@ fun NavGraph(navController: NavHostController, viewModel: CalFitViewModel, userP
                     viewModel::resendVerificationCode, { navigate(Screen.Login.route) })
             }
             composable(Screen.ForgotPassword.route) { ForgotPasswordScreen(viewModel::requestPasswordReset, ::back) }
+            composable(Screen.ResetPassword.route) {
+                val accessToken = recoveryAccessToken
+                if (accessToken == null) NakaPage("Password reset", { navigate(Screen.Login.route) }) {
+                    Text("Open the latest password-reset link from your email to continue.")
+                } else ResetPasswordScreen(onSubmit = { password, result ->
+                    viewModel.finishPasswordReset(accessToken, recoveryRefreshToken, password) { error, onboarded ->
+                        result(error)
+                        if (error == null) {
+                            recoveryAccessToken = null
+                            navController.navigate(if (onboarded) Screen.Home.route else Screen.Onboarding.route) {
+                                popUpTo(0) { inclusive = true }; launchSingleTop = true
+                            }
+                        }
+                    }
+                }, onBack = { navigate(Screen.Login.route) })
+            }
             composable(Screen.Onboarding.route) {
                 OnboardingScreen(uiState.userProfile?.name ?: "", { name, age, sex, height, weight, target, activity, goal, days ->
                     viewModel.completeOnboarding(name,age,sex,height,weight,target,activity,goal,days)
@@ -132,10 +203,19 @@ fun NavGraph(navController: NavHostController, viewModel: CalFitViewModel, userP
                 })
             }
             composable(Screen.Home.route) {
-                HomeScreen(uiState, { addFood(it ?: MealType.BREAKFAST) }, ::deleteFood,
-                    ::updateGoal, darkMode, onDarkModeChange, { navigate(Screen.Exercise.route) }, { openDiary(MealType.BREAKFAST) },
-                    { navigate(Screen.AddGoals.route) }, { navigate(Screen.Profile.route) }, { navigate(Screen.Track.route) },
-                    { navigate(NakaRoutes.Notifications) }, ::openWorkout, onMeal = ::openDiary, onFood = ::openMeal)
+                LaunchedEffect(Unit) { viewModel.setSelectedDate(java.time.LocalDate.now().toString()) }
+                val tracker = remember { com.kcalfit.app.data.health.StepTracking(context) }
+                var steps by remember { mutableStateOf(tracker.count()) }
+                DisposableEffect(tracker) {
+                    val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> steps = tracker.count() }
+                    tracker.prefs.registerOnSharedPreferenceChangeListener(listener)
+                    onDispose { tracker.prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+                }
+                LaunchedEffect(Unit) { runCatching { tracker.sync() }; steps = tracker.count() }
+                var premium by remember { mutableStateOf(false) }
+                LaunchedEffect(Unit) { runCatching { com.kcalfit.app.data.premium.PremiumApi().entitlement() }.onSuccess { premium = it.premium } }
+                ReferenceDashboard(uiState, ::navigate, ::updateGoal, premium = premium, steps = steps)
+
             }
             composable(Screen.Exercise.route) {
                 WorkoutDiscoveryScreen(::openWorkout, { navigate(NakaRoutes.ExerciseLog) },
@@ -152,6 +232,12 @@ fun NavGraph(navController: NavHostController, viewModel: CalFitViewModel, userP
             }
             composable(NakaRoutes.ExerciseLog) { ExerciseScreen(uiState, ::logExercise,
                 viewModel::deleteExerciseEntry, ::back) }
+            composable("food_image_scan") { FoodImageScanScreen(::back, { food -> selectedCatalogueFood = food; navController.navigate(Screen.AddFood.route) { popUpTo(Screen.AddFood.route) { inclusive = true } } }, { navigate(NakaRoutes.Premium) }) }
+            composable("health_connect") { HealthConnectionScreen(::back) }
+            composable(Screen.Diary.route) {
+                ReferenceDiary(uiState, ::back, viewModel::setSelectedDate, ::addFood, ::openMeal, ::deleteFood,
+                    { navigate(Screen.Nutrition.route) }, viewModel::toggleFasting)
+            }
             composable(Screen.Track.route) {
                 TrackScreen(uiState, userPreferences.getAuthUserId(),
                     { title,activity -> navigate("daily_goal/${Uri.encode(title)}/${Uri.encode(activity)}") }, { navigate(Screen.AddGoals.route) }, { navigate(NakaRoutes.Progress) },
@@ -175,7 +261,7 @@ fun NavGraph(navController: NavHostController, viewModel: CalFitViewModel, userP
             composable(Screen.Water.route) { WaterScreen(uiState,::addWater,::back) }
             composable(Screen.Weight.route) { WeightScreen(uiState,::logWeight,::back) }
             composable(Screen.Nutrition.route) {
-                NutritionMenuScreen(uiState, ::openDiary, { navigate(NakaRoutes.Search) })
+                ReferenceNutrition(uiState, ::back, viewModel::setSelectedDate, { navigate(NakaRoutes.Settings) }, ::openMeal)
             }
             composable("meal_diary/{meal}") { destination ->
                 val meal = MealType.fromString(destination.arguments?.getString("meal") ?: "Breakfast")
@@ -198,9 +284,10 @@ fun NavGraph(navController: NavHostController, viewModel: CalFitViewModel, userP
                     { addFood(addFoodMeal) }, ::back)
             }
             composable(Screen.AddFood.route) {
-                AddFoodScreen(initialMealType = addFoodMeal, searchResults = uiState.masterFoodSearchResults,
+                AddFoodScreen(initialMealType = addFoodMeal,
                     onSearchQueryChange = viewModel::setSearchQuery, onSave = viewModel::saveFoodEntry,
                     onNavigateBack = ::back, initialFood = selectedCatalogueFood, initialDate = uiState.selectedDate,
+                    foodSearchState = uiState.foodSearchState, onRetrySearch = viewModel::retryFoodSearch, onScanFood = { navigate("food_image_scan") },
                     onSaved = { food ->
                         navController.navigate("meal_diary/${MealType.fromString(food.mealType).name}") {
                             popUpTo(Screen.AddFood.route) { inclusive = true }
@@ -226,8 +313,8 @@ fun NavGraph(navController: NavHostController, viewModel: CalFitViewModel, userP
             }
             composable(NakaRoutes.Notifications) { NotificationSettingsScreen(::back, darkMode, onDarkModeChange) }
             composable(NakaRoutes.Devices) { DeviceConnectionScreen(::back) }
-            composable(NakaRoutes.Premium) { PremiumScreen(::back,{ navigate(NakaRoutes.Subscription) }) }
-            composable(NakaRoutes.Subscription) { SubscriptionScreen(::back) }
+            composable(NakaRoutes.Premium) { PremiumSubscriptionScreen(::back) }
+            composable(NakaRoutes.Subscription) { PremiumSubscriptionScreen(::back) }
             composable(NakaRoutes.Settings) { SettingsScreen(::back,darkMode,onDarkModeChange,{ navigate(NakaRoutes.Notifications) }) }
             composable(NakaRoutes.Support) { SupportScreen(::back) }
             composable(Screen.Chatbot.route) {
@@ -253,9 +340,8 @@ fun NavGraph(navController: NavHostController, viewModel: CalFitViewModel, userP
             }
             composable(Screen.CalorieSuggestion.route) {
                 val result by viewModel.onboardingResult.collectAsState()
-                result?.let { calc -> CalorieSuggestionScreen(calc.bmr,calc.tdee,calc.dailyCalorieTarget,uiState.targetProteinGrams,
-                    uiState.targetCarbsGrams,uiState.targetFatGrams,uiState.userProfile,::updateGoal,
-                    { viewModel.generateWorkoutPlan();navigate(Screen.WorkoutPlan.route) },{ navigate(Screen.Home.route) }) }
+                if (result != null || uiState.userProfile?.isOnboarded == true) ReferenceAccountCreated(result?.dailyCalorieTarget ?: uiState.dailyGoal) { navigate(Screen.Home.route) }
+                else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { androidx.compose.material3.CircularProgressIndicator() }
             }
             composable(Screen.WorkoutPlan.route) {
                 val plan by viewModel.workoutPlan.collectAsState()

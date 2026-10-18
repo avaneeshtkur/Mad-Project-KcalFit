@@ -70,7 +70,7 @@ fun ChatbotScreen(uiState: CalFitUiState, onSendMessage: (String) -> Unit, busy:
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back") }
             Column(Modifier.weight(1f)) {
-                Text("Calfit Coach", style = MaterialTheme.typography.titleLarge)
+                Text("kcalfit Coach", style = MaterialTheme.typography.titleLarge)
                 Text("Local assistant · your saved data", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }

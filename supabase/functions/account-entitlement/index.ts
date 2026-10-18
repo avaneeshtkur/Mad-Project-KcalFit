@@ -1,0 +1,2 @@
+import {admin,user,json} from '../_shared/backend.ts';import {premium} from '../_shared/play.ts';
+Deno.serve(async(req:Request)=>{try{const uid=(await user(req)).id;const active=await premium(uid);const {data,error}=await admin().from('kcalfit_scan_accounts').select('successful_free').eq('user_id',uid).maybeSingle();if(error)throw error;return json({premium:active,free_remaining:Math.max(0,5-(data?.successful_free??0))});}catch{return json({error:'Account benefits could not be verified. Try again later.'},503)}});

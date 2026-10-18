@@ -23,6 +23,9 @@ import com.kcalfit.app.data.model.WeightEntry
 import com.kcalfit.app.data.model.WorkoutRoutineEntity
 import com.kcalfit.app.data.preferences.UserPreferences
 import com.kcalfit.app.data.remote.OpenFoodFactsClient
+import com.kcalfit.app.data.search.FoodSearchRepository
+import com.kcalfit.app.data.search.RoomFoodSearchStore
+import com.kcalfit.app.data.search.AndroidFoodSearchDiagnostics
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -40,6 +43,8 @@ class FoodRepository(
     private val userPreferences: UserPreferences,
     private val foodApi: OpenFoodFactsClient = OpenFoodFactsClient()
 ) {
+    val foodSearch = FoodSearchRepository(RoomFoodSearchStore(foodItemDao),
+        remote = { foodApi.search(it) }, diagnostics = AndroidFoodSearchDiagnostics)
 
     // --- User Profile ---
     fun getUserProfileFlow(): Flow<UserEntity?> = userDao.getUserProfileFlow()
@@ -65,21 +70,15 @@ class FoodRepository(
     fun searchMasterFoods(query: String): Flow<List<FoodItemEntity>> = foodItemDao.searchMasterFoods(query)
     fun searchCachedApiFoods(query: String): Flow<List<FoodItemEntity>> = foodItemDao.searchCachedApiFoods(query)
     fun searchLiveFoods(query: String): Flow<List<FoodItemEntity>> = flow {
-        if (query.trim().length < 2) {
+        if (query.isBlank()) {
             emit(emptyList())
             return@flow
         }
-        val live = foodApi.search(query)
-        if (live.isNotEmpty()) {
-            foodItemDao.insertFoodItems(live)
-            emit(live)
-        } else {
-            emit(foodItemDao.searchCachedApiFoods(query).first())
-        }
+        emit(foodSearch.refresh(query).foods)
     }
     suspend fun findFoodByBarcode(barcode: String): FoodItemEntity? =
         foodApi.lookupBarcode(barcode) ?: foodItemDao.findByBarcode(barcode)
-    suspend fun insertCustomFood(item: FoodItemEntity): Long = foodItemDao.insertFoodItem(item)
+    suspend fun insertCustomFood(item: FoodItemEntity): Long = foodItemDao.insertFoodItem(item).also { foodSearch.invalidate() }
 
     // --- Exercise ---
     fun getExerciseEntriesForDate(date: String): Flow<List<ExerciseEntry>> = exerciseDao.getExerciseEntriesForDate(date)
@@ -98,6 +97,7 @@ class FoodRepository(
     fun getAllWeightEntries(): Flow<List<WeightEntry>> = lifestyleDao.getAllWeightEntries()
     suspend fun addWeight(weightKg: Double, date: String, notes: String = "") = lifestyleDao.insertWeightEntry(WeightEntry(weightKg = weightKg, date = date, notes = notes))
 
+    suspend fun finishFasting() = lifestyleDao.finishFasting(System.currentTimeMillis())
     fun getActiveFastingSession(): Flow<FastingSessionEntity?> = lifestyleDao.getActiveFastingSession()
     suspend fun startFasting(protocol: String, durationHours: Int) = lifestyleDao.insertFastingSession(FastingSessionEntity(protocol = protocol, startTimeMillis = System.currentTimeMillis(), targetDurationHours = durationHours))
 

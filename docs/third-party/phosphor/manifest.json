@@ -1,0 +1,26 @@
+{
+  "repository": "https://github.com/phosphor-icons/core",
+  "revision": "2b75f3ad12b420c9504ef05df8d2564a28f8500e",
+  "weight": "regular",
+  "defaultSizeDp": 24,
+  "icons": [
+    {
+      "name": "barbell",
+      "source": "assets/regular/barbell.svg",
+      "sourceSha256": "ac26822fad254eec2de1aaccbaccb24ee31368f5116192439bba41f4f3a306f5",
+      "drawable": "app/src/main/res/drawable/phosphor_barbell_regular.xml"
+    },
+    {
+      "name": "heart",
+      "source": "assets/regular/heart.svg",
+      "sourceSha256": "312dee73d1d969631d5498012f619ccf4edbdf31e1be3e65af4f4f1b3ac1b2dd",
+      "drawable": "app/src/main/res/drawable/phosphor_heart_regular.xml"
+    },
+    {
+      "name": "fork-knife",
+      "source": "assets/regular/fork-knife.svg",
+      "sourceSha256": "24388d27ec51856a899b2ba8a1f68b1c31b385ed1f27eb275d5685ebf951b80f",
+      "drawable": "app/src/main/res/drawable/phosphor_fork_knife_regular.xml"
+    }
+  ]
+}

@@ -41,7 +41,10 @@ interface LifestyleDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFastingSession(session: FastingSessionEntity): Long
 
-    @Query("SELECT * FROM fasting_sessions ORDER BY startTimeMillis DESC LIMIT 1")
+    @Query("UPDATE fasting_sessions SET isCompleted = 1, endTimeMillis = :ended WHERE isCompleted = 0")
+    suspend fun finishFasting(ended: Long)
+
+    @Query("SELECT * FROM fasting_sessions WHERE isCompleted = 0 ORDER BY startTimeMillis DESC LIMIT 1")
     fun getActiveFastingSession(): Flow<FastingSessionEntity?>
 
     // --- Recipes & Saved Meals ---

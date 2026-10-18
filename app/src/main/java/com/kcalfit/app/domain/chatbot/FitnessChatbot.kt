@@ -162,7 +162,7 @@ class FitnessChatbot(private val clockMillis: () -> Long = System::currentTimeMi
                 CoachReply("Your saved calorie target is ${data.goal} kcal; ${totals.calories} kcal are recorded for ${r.date}. $activity Review your diary for missing entries, then use Track to review your activity. Device steps aren't connected, so I can't judge your step goal. For weight goals, use the goal settings rather than skipping meals to compensate.",CoachAction(CoachDestination.TRACK))
             }
             CoachIntent.CLARIFY -> CoachReply(r.subject)
-            CoachIntent.OUTSIDE -> CoachReply("I focus on KcalFit, food, fitness and your recorded progress. Try ‘What did I eat for breakfast today?’ or ‘Open Nutrition’. For medical symptoms or treatment, contact a qualified clinician.")
+            CoachIntent.OUTSIDE -> CoachReply("I focus on kcalfit, food, fitness and your recorded progress. Try ‘What did I eat for breakfast today?’ or ‘Open Nutrition’. For medical symptoms or treatment, contact a qualified clinician.")
         }
         return r to reply
     }

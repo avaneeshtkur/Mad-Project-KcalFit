@@ -61,7 +61,7 @@ object BmrCalculator {
         goal: FitnessGoal,
         weeklyChangeKg: Double = 0.5
     ): CalorieCalculationResult {
-        val dailyAdjustment = (weeklyChangeKg * 1000).roundToInt().coerceIn(250, 1000)
+        val dailyAdjustment = (weeklyChangeKg * 1000).roundToInt().coerceIn(200, 1000)
 
         val target = when (goal) {
             FitnessGoal.LOSE_WEIGHT -> (tdee - dailyAdjustment).coerceAtLeast(1200)

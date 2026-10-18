@@ -14,14 +14,20 @@ import androidx.compose.ui.unit.dp
 import com.kcalfit.app.data.model.*
 import com.kcalfit.app.domain.calculator.FoodDiaryRules
 import com.kcalfit.app.ui.nakafit.*
+import com.kcalfit.app.ui.viewmodel.FoodSearchUiState
+import com.kcalfit.app.ui.viewmodel.foods
+import com.kcalfit.app.data.search.FoodSearchText
+import androidx.compose.ui.platform.LocalUriHandler
 import java.time.LocalDate
 
 @Composable
-fun AddFoodScreen(initialMealType: MealType = MealType.BREAKFAST, searchResults: List<FoodItemEntity>,
+fun AddFoodScreen(initialMealType: MealType = MealType.BREAKFAST,
     onSearchQueryChange: (String) -> Unit, onSave: (FoodEntry, (String?) -> Unit) -> Unit,
     onNavigateBack: () -> Unit, initialFood: FoodItemEntity? = null, initialDate: String = LocalDate.now().toString(),
-    modifier: Modifier = Modifier, onSaved: (FoodEntry) -> Unit = { onNavigateBack() }) {
+    modifier: Modifier = Modifier, onSaved: (FoodEntry) -> Unit = { onNavigateBack() },
+    foodSearchState: FoodSearchUiState = FoodSearchUiState.Idle, onRetrySearch: () -> Unit = {}, onScanFood: () -> Unit = {}) {
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     var query by rememberSaveable(initialFood?.id) { mutableStateOf(initialFood?.name.orEmpty()) }
     var selected by remember(initialFood) { mutableStateOf(initialFood) }
     var meal by rememberSaveable(initialMealType) { mutableStateOf(initialMealType) }
@@ -39,17 +45,54 @@ fun AddFoodScreen(initialMealType: MealType = MealType.BREAKFAST, searchResults:
         unfocusedTextColor = MaterialTheme.colorScheme.onSurface, focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant, focusedBorderColor = MaterialTheme.colorScheme.primary,
         unfocusedBorderColor = MaterialTheme.colorScheme.outline, cursorColor = MaterialTheme.colorScheme.primary)
+    DisposableEffect(Unit) {
+        onDispose { onSearchQueryChange("") } // Cancel sockets and delayed retries when leaving this screen.
+    }
+    LaunchedEffect(Unit) { onSearchQueryChange(if (selected == null && !manual) query else "") }
     NakaPage("Add Food", onNavigateBack) {
-        OutlinedTextField(query, { query = it; selected = null; onSearchQueryChange(it); error = null }, Modifier.fillMaxWidth(),
+        NakaButton("Scan food · Camera or gallery", onScanFood, outlined = true)
+        OutlinedTextField(query, { query = it; selected = null; if (!manual) onSearchQueryChange(it); error = null }, Modifier.fillMaxWidth(),
             label = { Text("Food name") }, singleLine = true, textStyle = MaterialTheme.typography.bodyLarge, colors = fields, shape = RoundedCornerShape(28.dp))
         if (!manual && selected == null && query.isNotBlank()) {
-            if (searchResults.isEmpty()) Text("No matching food. Enter nutrition manually.")
-            searchResults.take(20).forEach { food -> NakaRow(food.name,
-                "${food.calories} kcal / ${food.servingSize} ${food.servingUnit}", {
-                    selected = food; query = food.name; amount = food.servingSize.toString(); unit = food.servingUnit
-                }) }
+            val term = FoodSearchText.normalize(query)
+            val stateQuery = when (val state = foodSearchState) {
+                FoodSearchUiState.Idle -> ""
+                is FoodSearchUiState.Loading -> state.query
+                is FoodSearchUiState.Refreshing -> state.query
+                is FoodSearchUiState.Results -> state.query
+                is FoodSearchUiState.Empty -> state.query
+                is FoodSearchUiState.Error -> state.query
+            }
+            val activeState = if (stateQuery == term) foodSearchState else FoodSearchUiState.Loading(term)
+            when (activeState) {
+                is FoodSearchUiState.Loading, is FoodSearchUiState.Refreshing -> Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    Text(if (activeState is FoodSearchUiState.Refreshing) "Updating saved matches…" else "Searching foods…",
+                        color = MaterialTheme.colorScheme.primary)
+                }
+                is FoodSearchUiState.Empty -> Text("No matching food. You can enter nutrition manually.")
+                is FoodSearchUiState.Error -> {
+                    Text(activeState.message, color = MaterialTheme.colorScheme.error)
+                    if (activeState.cachedFoods.isNotEmpty()) Text("Showing saved matches.")
+                    Button(onClick = onRetrySearch) { Text("Retry search") }
+                }
+                else -> Unit
+            }
+            activeState.foods.take(50).forEach { food ->
+                key(com.kcalfit.app.data.search.FoodSearchIndex.identity(food)) {
+                    NakaRow(food.name, "${food.calories} kcal / ${food.servingSize} ${food.servingUnit}", onClick = {
+                        selected = food; query = food.name; amount = food.servingSize.toString(); unit = food.servingUnit
+                        onSearchQueryChange("")
+                    })
+                }
+            }
+            if (activeState.foods.any { it.source == "open_food_facts" }) TextButton(onClick = {
+                uriHandler.openUri("https://world.openfoodfacts.org/terms-of-use")
+            }) { Text("Food data: Open Food Facts · ODbL", style = MaterialTheme.typography.bodySmall) }
         }
-        TextButton({ manual = !manual; selected = null }) { Text(if (manual) "Use Food Search" else "Enter Nutrition Manually") }
+        TextButton({ manual = !manual; selected = null; onSearchQueryChange(if (manual) "" else query) }) { Text(if (manual) "Use Food Search" else "Enter Nutrition Manually") }
         Text("Serving", style = MaterialTheme.typography.titleMedium)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(amount, { amount = it }, Modifier.weight(1f), label = { Text("Quantity") }, singleLine = true,
@@ -90,16 +133,11 @@ fun AddFoodScreen(initialMealType: MealType = MealType.BREAKFAST, searchResults:
                 val known = listOf(protein, carbs, fat).all { it.isNotBlank() }
                 require(!manual || known || listOf(protein, carbs, fat).all { it.isBlank() }) { "Enter all three macros or leave all blank" }
                 val food = selected
-                val factor = if (!manual) FoodDiaryRules.multiplier(quantity, food?.servingSize ?: error("Choose a food first")) else 1.0
                 val entry = if (manual) FoodEntry(foodName = query.trim(), mealType = meal.displayName,
                     calories = calories.toIntOrNull() ?: error("Enter calories for this quantity"),
                     proteinGrams = if (known) protein.toDouble() else 0.0, carbsGrams = if (known) carbs.toDouble() else 0.0,
                     fatGrams = if (known) fat.toDouble() else 0.0, quantity = "$amount ${unit.trim()}", date = date, nutritionKnown = known)
-                else FoodEntry(foodName = food!!.name, brand = food.brand, mealType = meal.displayName,
-                    calories = FoodDiaryRules.calories(food.calories, factor), proteinGrams = food.proteinGrams * factor,
-                    carbsGrams = food.carbsGrams * factor, fatGrams = food.fatGrams * factor, fiberGrams = food.fiberGrams * factor,
-                    sugarGrams = food.sugarGrams * factor, sodiumMg = food.sodiumMg * factor, quantity = "$amount $unit", date = date,
-                    nutritionKnown = food.nutritionKnown)
+                else FoodDiaryRules.fromCatalog(food ?: error("Choose a food first"), quantity, "$amount $unit", meal, date)
                 FoodDiaryRules.validate(entry)
                 saving = true; error = null
                 onSave(entry) { failure -> saving = false; if (failure == null) onSaved(entry) else error = failure }

@@ -1,11 +1,15 @@
 # CalFit authentication and food catalog setup
 
-The app uses Supabase Auth for email/password accounts. No OTP is generated or accepted on-device.
+The app uses Supabase Auth's REST API for email/password accounts and accepts Supabase's six-digit confirmation token in the app. It does not use a Supabase Kotlin SDK.
+
+Supabase references: [redirect URLs](https://supabase.com/docs/guides/auth/redirect-urls), [native mobile deep linking](https://supabase.com/docs/guides/auth/native-mobile-deep-linking), [password recovery](https://supabase.com/docs/guides/auth/passwords), and [Google provider setup](https://supabase.com/docs/guides/auth/social-login/auth-google).
 
 1. Create a Supabase project. In **Authentication → Providers → Email**, enable email signups and **Confirm email**. Keep phone confirmation off if you want a clear duplicate-email error for an already registered address.
-2. In **Authentication → Email Templates → Confirm signup**, put the six-digit `{{ .Token }}` in the message body (for example, “Welcome to CalFit. Your one-time password is {{ .Token }}”). The stock confirmation-link template does not match the app's six-digit entry screen.
-3. Configure a production SMTP provider in Supabase before production use; the default mail service has delivery and rate limits. Also configure the password-recovery template and redirect destination if you plan to use reset links.
-4. Add these *build-time* settings to the project's ignored `local.properties` and rebuild:
+2. In **Authentication → Email Templates → Confirm signup**, include a confirmation link using `{{ .ConfirmationURL }}` and the six-digit `{{ .Token }}` as a manual fallback. The link confirms the address and opens the Android app; entering the code continues to use the app's existing verification screen.
+3. In **Authentication → URL Configuration**, set **Site URL** to `com.kcalfit.app://auth/callback` for this native-only app, and add the exact same value under **Redirect URLs**. The app supplies it for signup and password recovery. If CalFit gets a real website later, use its HTTPS URL for Site URL and keep this app URL in Redirect URLs. Do not leave localhost as the fallback. Preserve `{{ .ConfirmationURL }}` in the recovery template so the recovery request is verified before redirecting to the app. Configure a production SMTP provider before release; Supabase's default mail service has delivery and rate limits.
+4. For Google sign-in, enable Google under **Authentication → Providers → Google**. Create OAuth credentials in Google Cloud Console and place the client ID and secret in Supabase's Google provider settings. Configure the authorized redirect URI shown by Supabase in Google Cloud (the Supabase Auth callback, not the app URI). Keep `com.kcalfit.app://auth/callback` in Supabase's Auth Redirect URLs. Never put the Google client secret in the Android app. Google sign-in must be verified with valid provider credentials and network access.
+5. Email/password registration supports both the six-digit confirmation screen and confirmation-link deep linking. Keep both `{{ .ConfirmationURL }}` and `{{ .Token }}` in **Confirm signup**. The app sends `redirect_to=com.kcalfit.app://auth/callback` with signup; after the user taps the confirmation link, Supabase verifies it and returns session tokens to Android.
+6. Add these *build-time* settings to the project's ignored `local.properties` and rebuild:
 
    ```properties
    SUPABASE_URL=https://YOUR_PROJECT.supabase.co

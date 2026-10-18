@@ -1,8 +1,9 @@
 package com.kcalfit.app
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -22,14 +23,16 @@ import com.kcalfit.app.ui.viewmodel.CalFitViewModelFactory
 
 class MainActivity : ComponentActivity() {
 
+    private var authCallbackUri by mutableStateOf<Uri?>(null)
+
     private val viewModel: CalFitViewModel by viewModels {
         val app = application as CalFitApplication
         CalFitViewModelFactory(app.repository)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
         super.onCreate(savedInstanceState)
+        authCallbackUri = intent?.data
         enableEdgeToEdge()
 
         val app = application as CalFitApplication
@@ -50,10 +53,18 @@ class MainActivity : ComponentActivity() {
                         onDarkModeChange = { enabled ->
                             app.userPreferences.setDarkMode(enabled)
                             darkMode = enabled
-                        }
+                        },
+                        authCallbackUri = authCallbackUri,
+                        onAuthCallbackHandled = { authCallbackUri = null }
                     )
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        authCallbackUri = intent.data
     }
 }

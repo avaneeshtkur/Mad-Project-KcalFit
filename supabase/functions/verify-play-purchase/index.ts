@@ -1,0 +1,2 @@
+import {user,body,json} from '../_shared/backend.ts';import {verifyPurchase} from '../_shared/play.ts';
+Deno.serve(async(req:Request)=>{try{const uid=(await user(req)).id;const input=await body(req,8192);if(typeof input.purchase_token!=='string'||input.purchase_token.length>4096)return json({error:'Invalid purchase'},400);return json({premium:await verifyPurchase(uid,input.purchase_token)});}catch(e){return json({error:e instanceof Error?e.message:'Verification unavailable'},503)}});

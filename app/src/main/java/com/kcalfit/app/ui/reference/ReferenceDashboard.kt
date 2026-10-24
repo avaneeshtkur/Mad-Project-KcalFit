@@ -71,14 +71,15 @@ import kotlin.math.roundToInt
         }
     }
 }
-@Composable fun ReferenceDashboard(state:CalFitUiState,navigate:(String)->Unit,onGoal:(Int)->Unit,premium:Boolean=false,steps:Long?=null) {
+@Composable fun ReferenceDashboard(state:CalFitUiState,navigate:(String)->Unit,onGoal:(Int)->Unit,premium:Boolean=false,steps:Long?=null,onAddFood:(com.kcalfit.app.data.model.MealType)->Unit) {
     var edit by remember{mutableStateOf(false)}
     val pager=rememberPagerState {4}
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom=12.dp)) {
         Row(Modifier.padding(horizontal=16.dp).fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
-            IconButton({navigate(Screen.Profile.route)}){Surface(shape=CircleShape,color=ReferenceStyle.Selected){Text(state.userProfile?.name?.take(1)?.uppercase()?:"",Modifier.padding(12.dp),color=ReferenceStyle.Blue)}}
+            IconButton({navigate(Screen.Profile.route)}){Surface(Modifier.size(36.dp),shape=CircleShape,color=ReferenceStyle.Selected){Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text(state.userProfile?.name?.trim()?.take(1)?.uppercase()?:"",color=ReferenceStyle.Blue,fontSize=18.sp,lineHeight=22.sp,maxLines=1)}}}
             Column(Modifier.weight(1f),horizontalAlignment=Alignment.CenterHorizontally){KcalfitWordmark(size=30.sp)
-                Surface(onClick={navigate(NakaRoutes.Premium)},color=if(premium)Color.Transparent else Color(0xFFFFDF24),shape=CircleShape){Row(Modifier.padding(horizontal=40.dp,vertical=5.dp),verticalAlignment=Alignment.CenterVertically){Text(if(premium)"Premium" else "Go Premium",color=Color.Black,fontWeight=FontWeight.SemiBold,fontSize=13.sp);ReferenceIcon(R.drawable.reference_icon_crown,null,Modifier.size(16.dp))}}}
+                Surface(onClick={navigate(NakaRoutes.Premium)},color=if(premium)Color.Transparent else Color(0xFFFFDF24),shape=CircleShape){Row(Modifier.padding(horizontal=16.dp,vertical=5.dp),verticalAlignment=Alignment.CenterVertically){Text(if(premium)"Premium" else "Go Premium",color=Color.Black,fontWeight=FontWeight.SemiBold,fontSize=13.sp);ReferenceIcon(R.drawable.reference_icon_crown,null,Modifier.size(16.dp))}}}
+            IconButton({navigate(Screen.Chatbot.route)}){Icon(Icons.Default.ChatBubbleOutline,"Open chatbot",Modifier.size(22.dp))}
             IconButton({navigate(NakaRoutes.Notifications)}){Icon(Icons.Default.NotificationsNone,"Notifications")}
         }
         Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically){Text("Today",Modifier.weight(1f),fontSize=23.sp);TextButton({edit=true}){Text("Edit",Modifier.background(ReferenceStyle.LightBlue,CircleShape).padding(horizontal=18.dp,vertical=2.dp),color=ReferenceStyle.Blue)}}
@@ -104,6 +105,13 @@ import kotlin.math.roundToInt
         }
         Row(Modifier.align(Alignment.CenterHorizontally).padding(14.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){repeat(4){Box(Modifier.size(7.dp).background(if(pager.currentPage==it)ReferenceStyle.Blue else ReferenceStyle.Selected,CircleShape))}}
         if(!premium){TextButton({navigate(NakaRoutes.Premium)},Modifier.align(Alignment.CenterHorizontally)){Text("Explore kcalfit Premium")}}
+        ReferenceCard(Modifier.padding(horizontal=16.dp).padding(bottom=16.dp).fillMaxWidth()){
+            Row(verticalAlignment=Alignment.CenterVertically){Text("Diary",Modifier.weight(1f),fontSize=23.sp);TextButton({navigate(Screen.Diary.route)}){Text("View diary")}}
+            listOf(com.kcalfit.app.data.model.MealType.BREAKFAST,com.kcalfit.app.data.model.MealType.LUNCH,com.kcalfit.app.data.model.MealType.DINNER).forEach { meal ->
+                val calories=state.selectedDateEntries.filter{com.kcalfit.app.data.model.MealType.fromString(it.mealType)==meal}.sumOf{it.calories}
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Text(meal.displayName,Modifier.weight(1f),fontWeight=FontWeight.SemiBold);Text("$calories cal",color=ReferenceStyle.Muted);IconButton({onAddFood(meal)}){Icon(Icons.Default.Add,"Add ${meal.displayName}")}}
+            }
+        }
         ReferenceCard(Modifier.padding(horizontal=16.dp).fillMaxWidth().clickable{navigate(Screen.Exercise.route)}){Row{Text("Exercise",Modifier.weight(1f),fontWeight=FontWeight.SemiBold);Icon(Icons.Default.Add,"Log exercise",Modifier.size(20.dp))};Row(verticalAlignment=Alignment.CenterVertically){ReferenceIcon(R.drawable.reference_icon_fire,null);Text("${state.caloriesBurned} cal",Modifier.padding(6.dp),color=ReferenceStyle.Muted)};Row(verticalAlignment=Alignment.CenterVertically){ReferenceIcon(R.drawable.reference_icon_clock,null,tint=ReferenceStyle.Warning);Text("%.2f hr".format(state.exerciseEntries.sumOf{it.durationMinutes}/60.0),Modifier.padding(6.dp),color=ReferenceStyle.Muted)}}
         ReferenceCard(Modifier.padding(16.dp).fillMaxWidth().clickable{navigate(Screen.Weight.route)}){Text("Weight",fontSize=23.sp);Text("${state.latestWeightKg} kg",fontSize=26.sp);Text("Log and view your weight",color=ReferenceStyle.Muted,fontSize=12.sp)}
     }

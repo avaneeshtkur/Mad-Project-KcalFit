@@ -110,6 +110,16 @@ fun AddFoodScreen(initialMealType: MealType = MealType.BREAKFAST,
             }
             Text("Macros are optional. Leave all three blank if unavailable.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
         } else if (selected != null) {
+            val food = selected!!
+            val quantity = amount.toDoubleOrNull()
+            val portion = quantity?.takeIf { it.isFinite() && it > 0 }?.let {
+                runCatching { FoodDiaryRules.fromCatalog(food, it, "$amount $unit", meal, date) }.getOrNull()
+            }
+            portion?.let {
+                Text("${it.calories} kcal for this portion", style = MaterialTheme.typography.titleMedium)
+                if (it.nutritionKnown) Text("Protein %.1f g · Carbs %.1f g · Fat %.1f g".format(it.proteinGrams, it.carbsGrams, it.fatGrams),
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Text("Catalogue estimates per ${selected!!.servingSize} ${selected!!.servingUnit}. Values scale to your quantity; check the packaging for accuracy.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
         }

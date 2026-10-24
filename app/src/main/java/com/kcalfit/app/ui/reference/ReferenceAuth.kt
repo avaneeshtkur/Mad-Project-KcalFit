@@ -65,7 +65,6 @@ import kotlinx.coroutines.launch
                 Spacer(Modifier.height(36.dp));Button({stage=1},Modifier.fillMaxWidth().heightIn(min=48.dp),shape=RoundedCornerShape(4.dp)){Text("Continue",fontSize=17.sp,fontWeight=FontWeight.Bold)}
                 Text("OR",Modifier.padding(12.dp),fontSize=17.sp)
                 ElevatedButton(onGoogle,Modifier.fillMaxWidth().heightIn(min=48.dp),enabled=!isLoading,shape=RoundedCornerShape(4.dp),colors=ButtonDefaults.elevatedButtonColors(containerColor=Color.White,contentColor=Color.Black)){ReferenceIcon(R.drawable.reference_icon_google,null);Spacer(Modifier.width(8.dp));Text("Continue with Google",fontWeight=FontWeight.Bold)}
-                Spacer(Modifier.height(8.dp));ElevatedButton({info="Apple sign-in is not configured for this Android app. Use email or Google to create your account."},Modifier.fillMaxWidth().heightIn(min=48.dp),shape=RoundedCornerShape(4.dp),colors=ButtonDefaults.elevatedButtonColors(containerColor=Color.White,contentColor=Color.Black)){Text("Continue with Apple",fontWeight=FontWeight.Bold)}
                 Spacer(Modifier.height(90.dp));Text("We collect the profile details you choose to share to personalize your kcalfit experience.",color=ReferenceStyle.Muted,textAlign=TextAlign.Center)
                 TextButton({info="Your email and account profile are handled by Supabase authentication. Food, activity and health logs are stored in the app’s local database. A published privacy-policy URL has not been configured."}){Text("Privacy Policy")}
             } else {

@@ -46,11 +46,11 @@ private fun EmptyNutritionPreview() {
 @Preview(name = "Dashboard · local kit", widthDp = 360, heightDp = 760, showBackground = true)
 @Composable
 private fun DashboardPreview() {
-    CalFitTheme { Surface { ReferenceDashboard(previewState(), {}, {}, steps = 449L) } }
+    CalFitTheme { Surface { ReferenceDashboard(previewState(), {}, {}, steps = 449L, onAddFood = {}) } }
 }
 
 @Preview(name = "Diary · local kit", widthDp = 360, heightDp = 760, showBackground = true)
 @Composable
 private fun DiaryPreview() {
-    CalFitTheme { Surface { ReferenceDiary(previewState(), {}, {}, {}, {}, {}, {}, {}) } }
+    CalFitTheme { Surface { ReferenceDiary(previewState(), {}, {}, {}, {}, {}, {}) } }
 }

@@ -77,7 +77,7 @@ class FoodRepository(
         emit(foodSearch.refresh(query).foods)
     }
     suspend fun findFoodByBarcode(barcode: String): FoodItemEntity? =
-        foodApi.lookupBarcode(barcode) ?: foodItemDao.findByBarcode(barcode)
+        foodItemDao.findByBarcode(barcode) ?: foodApi.lookupBarcode(barcode)
     suspend fun insertCustomFood(item: FoodItemEntity): Long = foodItemDao.insertFoodItem(item).also { foodSearch.invalidate() }
 
     // --- Exercise ---

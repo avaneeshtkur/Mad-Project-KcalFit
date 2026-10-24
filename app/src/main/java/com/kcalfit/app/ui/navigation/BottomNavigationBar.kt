@@ -49,7 +49,7 @@ fun BottomNavigationBar(navController: NavController, modifier: Modifier = Modif
                             Text("Search for food", Modifier.padding(8.dp), color = ReferenceStyle.Muted, fontSize = 14.sp)
                         }
                         IconButton({ navController.navigate(Screen.BarcodeLookup.route) }) {
-                            ReferenceIcon(R.drawable.reference_icon_barcode, "Barcode lookup", tint = ReferenceStyle.Blue)
+                            ReferenceIcon(R.drawable.ic_food_barcode, "Scan barcode or food photo", tint = ReferenceStyle.Blue)
                         }
                     }
                 }

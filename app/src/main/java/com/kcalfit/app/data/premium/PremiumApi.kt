@@ -24,7 +24,7 @@ class PremiumApi {
         try{connection.outputStream.use{it.write(body.toString().toByteArray())};val code=connection.responseCode
             val raw=(if(code in 200..299)connection.inputStream else connection.errorStream)?.bufferedReader()?.use{it.readText()}.orEmpty()
             val json=runCatching{JSONObject(raw)}.getOrDefault(JSONObject())
-            if(code !in 200..299)throw IllegalStateException(when(code){404->"Food scanning and subscriptions are not configured on the server yet. Manual food logging is available.";402->"Your five free scans are used. Premium is required for further scans.";409->"This scan is already being processed. Retry shortly.";else->json.optString("error","The service is unavailable. Try again.")})
+            if(code !in 200..299)throw IllegalStateException(when(code){404->if(function=="fitness-coach") "The AI coach is not configured on the server yet." else "Food scanning and subscriptions are not configured on the server yet. Manual food logging is available.";402->"Your five free scans are used. Premium is required for further scans.";409->"This scan is already being processed. Retry shortly.";else->json.optString("error","The service is unavailable. Try again.")})
             json
         }finally{connection.disconnect()}
     }

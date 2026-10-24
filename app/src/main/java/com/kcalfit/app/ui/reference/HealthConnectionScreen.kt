@@ -22,6 +22,13 @@ import kotlinx.coroutines.launch
     val context=LocalContext.current;val tracker=remember{StepTracking(context)};val scope=rememberCoroutineScope()
     var message by remember{mutableStateOf("Choose one step source. Health Connect combines compatible fitness apps without adding duplicate device counts.")}
     var revision by remember{mutableIntStateOf(0)}
+    DisposableEffect(tracker) {
+        val listener=SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> revision++ }
+        tracker.prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { tracker.prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+    val source=tracker.prefs.getString("source","").orEmpty()
+    val connected=source.isNotBlank()
     val health=rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()){granted->
         scope.launch{if(granted.containsAll(tracker.permissions)){tracker.useHealth();runCatching{tracker.sync()}.onFailure{message=it.message?:"Could not sync steps"};tracker.schedule();message="Health Connect connected. Background sync requires its separate permission."}else message="Step and distance access were not granted. You can retry or use the device sensor.";revision++}
     }
@@ -29,17 +36,26 @@ import kotlinx.coroutines.launch
     val sensor=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){if(it)startSensor() else message="Activity recognition permission is needed to count device steps."}
     NakaPage("Automatic steps",onBack){
         Text(message)
-        Text("Source: ${tracker.prefs.getString("source","").orEmpty().ifBlank{"Not connected"}}")
+        if (connected) {
+            Text("Connected",style=MaterialTheme.typography.titleMedium,color=MaterialTheme.colorScheme.primary)
+            Text("Source: ${if(source=="health")"Health Connect" else "Device step sensor"}")
+        } else {
+            Text("Not connected",style=MaterialTheme.typography.titleMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         Text("Today: ${tracker.count()?.toString() ?: "No data"} steps")
-        NakaButton("Connect Health Connect",{if(tracker.available)health.launch(tracker.permissions) else message="Health Connect is unavailable. Install or update Health Connect on a supported Android device."})
-        if(tracker.backgroundAvailable())NakaButton("Allow background sync",{health.launch(tracker.permissions+HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND)},outlined=true)
-        NakaButton("Sync now",{scope.launch{message=runCatching{if(tracker.sync())"Steps updated" else "Connect Health Connect and grant access first"}.getOrElse{"Sync failed: ${it.message}"};revision++}},outlined=true)
-        NakaButton("Use device step sensor",{
-            if((context.getSystemService(Context.SENSOR_SERVICE) as SensorManager).getDefaultSensor(Sensor.TYPE_STEP_COUNTER)==null)message="This device has no step-counter sensor. Use a compatible Health Connect data source."
-            else if(Build.VERSION.SDK_INT>=29 && ContextCompat.checkSelfPermission(context,Manifest.permission.ACTIVITY_RECOGNITION)!=PackageManager.PERMISSION_GRANTED)sensor.launch(Manifest.permission.ACTIVITY_RECOGNITION) else startSensor()
-        },outlined=true)
-        Text("Sensor totals cover periods when counting is enabled. Distance is shown only when supplied by Health Connect.")
-        NakaButton("Disconnect",{tracker.stop();message="Tracking disconnected";revision++},outlined=true)
+        if (connected) {
+            Text("Steps are being tracked automatically. Disconnect to choose a different source.",color=MaterialTheme.colorScheme.onSurfaceVariant)
+            NakaButton("Disconnect",{tracker.stop();message="Tracking disconnected";revision++},outlined=true)
+        } else {
+            NakaButton("Connect Health Connect",{if(tracker.available)health.launch(tracker.permissions) else message="Health Connect is unavailable. Install or update Health Connect on a supported Android device."})
+            if(tracker.backgroundAvailable())NakaButton("Allow background sync",{health.launch(tracker.permissions+HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND)},outlined=true)
+            NakaButton("Sync now",{scope.launch{message=runCatching{if(tracker.sync())"Steps updated" else "Connect Health Connect and grant access first"}.getOrElse{"Sync failed: ${it.message}"};revision++}},outlined=true)
+            NakaButton("Use device step sensor",{
+                if((context.getSystemService(Context.SENSOR_SERVICE) as SensorManager).getDefaultSensor(Sensor.TYPE_STEP_COUNTER)==null)message="This device has no step-counter sensor. Use a compatible Health Connect data source."
+                else if(Build.VERSION.SDK_INT>=29 && ContextCompat.checkSelfPermission(context,Manifest.permission.ACTIVITY_RECOGNITION)!=PackageManager.PERMISSION_GRANTED)sensor.launch(Manifest.permission.ACTIVITY_RECOGNITION) else startSensor()
+            },outlined=true)
+            Text("Sensor totals cover periods when counting is enabled. Distance is shown only when supplied by Health Connect.")
+        }
         Text("Connection updated $revision",style=MaterialTheme.typography.bodySmall)
     }
 }

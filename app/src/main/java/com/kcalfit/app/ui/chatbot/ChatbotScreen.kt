@@ -71,7 +71,7 @@ fun ChatbotScreen(uiState: CalFitUiState, onSendMessage: (String) -> Unit, busy:
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back") }
             Column(Modifier.weight(1f)) {
                 Text("kcalfit Coach", style = MaterialTheme.typography.titleLarge)
-                Text("Local assistant · your saved data", style = MaterialTheme.typography.bodySmall,
+                Text("Local coach · fitness and nutrition", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             IconButton(onClick = { spokenReplies = !spokenReplies; if(!spokenReplies) voice.stopSpeaking() }) {
@@ -82,17 +82,19 @@ fun ChatbotScreen(uiState: CalFitUiState, onSendMessage: (String) -> Unit, busy:
         LazyColumn(Modifier.weight(1f), state = list, contentPadding = PaddingValues(vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (uiState.coachMessages.isEmpty()) item {
-                Text("Ask about today's meals, calories left, exercise technique, or where to find a feature. Food estimates use the local catalogue.",
+                Text("Ask about today's meals, calories left, exercise technique, or where to find a feature. Replies use your saved diary and the app's local fitness guidance.",
                     style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             items(uiState.coachMessages, key = { it.id }) { message ->
                 val user = message.sender == "USER"
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = if(user) Arrangement.End else Arrangement.Start) {
-                    Surface(Modifier.widthIn(max = 560.dp), shape = RoundedCornerShape(18.dp),
+                    Surface(Modifier.fillMaxWidth(if(user) .88f else 1f).widthIn(max = 560.dp), shape = RoundedCornerShape(18.dp),
                         color = if(user) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                         contentColor = if(user) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant) {
                         Column(Modifier.padding(14.dp)) {
-                            Text(message.messageText, style = MaterialTheme.typography.bodyLarge)
+                            androidx.compose.foundation.text.selection.SelectionContainer {
+                                Text(message.messageText, style = MaterialTheme.typography.bodyLarge)
+                            }
                             if(!user) IconButton(onClick = { voice.speak(message.messageText) }) {
                                 Icon(Icons.AutoMirrored.Filled.VolumeUp,"Read response aloud")
                             }

@@ -25,7 +25,8 @@ import com.kcalfit.app.ui.viewmodel.CalFitUiState
 
 object NakaRoutes {
     const val WorkoutDetail = "workout_detail/{id}"
-    const val WorkoutSession = "workout_session/{id}"
+    /** `start=true` when a Start button opened it, so the session begins on arrival. */
+    const val WorkoutSession = "workout_session/{id}?start={start}"
     const val ExerciseLog = "exercise_log"
     const val DailyGoal = "daily_goal/{title}/{activity}"
     const val Progress = "progress"

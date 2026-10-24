@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.health.READ_STEPS" />
     <uses-permission android:name="android.permission.health.READ_DISTANCE" />
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
@@ -41,6 +42,8 @@
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/meal_image_paths" />
         </provider>
         <service android:name=".data.health.StepCounterService" android:exported="false" android:foregroundServiceType="health" />
+        <service android:name=".data.workout.WorkoutSessionService" android:exported="false" android:foregroundServiceType="health" />
+        <receiver android:name=".data.workout.WorkoutActionReceiver" android:exported="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

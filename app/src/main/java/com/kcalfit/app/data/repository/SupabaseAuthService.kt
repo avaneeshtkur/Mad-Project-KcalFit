@@ -66,14 +66,17 @@ class SupabaseAuthService {
     )
 
     suspend fun resend(email: String) {
-        post("resend", JSONObject().put("email", email).put("type", "signup"))
+        post("resend?redirect_to=${encode(APP_AUTH_REDIRECT)}", JSONObject().put("email", email).put("type", "signup"))
     }
 
     suspend fun requestPasswordReset(email: String) {
         post("recover?redirect_to=${encode(APP_AUTH_REDIRECT)}", JSONObject().put("email", email))
     }
 
-    fun googleAuthorizationUrl(): String = "$baseUrl/auth/v1/authorize?provider=google&redirect_to=${encode(APP_AUTH_REDIRECT)}"
+    /** Exchanges a Google ID token from Credential Manager; [nonce] is the raw value whose SHA-256 Google signed. */
+    suspend fun signInWithGoogleIdToken(idToken: String, nonce: String): Session = session(
+        post("token?grant_type=id_token", JSONObject().put("provider", "google").put("id_token", idToken).put("nonce", nonce))
+    )
 
     suspend fun sessionFromOAuthTokens(accessToken: String, refreshToken: String): Session {
         val user = request("GET", "user", JSONObject(), accessToken)

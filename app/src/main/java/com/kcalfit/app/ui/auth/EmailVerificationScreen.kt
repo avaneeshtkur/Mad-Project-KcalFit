@@ -44,7 +44,8 @@ fun EmailVerificationScreen(
         Spacer(Modifier.height(24.dp))
         Text("Check your inbox", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
-        Text("Enter the 6-digit code sent to $email", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("We sent a confirmation email to $email. Tap the link in it on this device and kcalfit will open signed in. If your email shows a 6-digit code instead, enter it below.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(28.dp))
         OutlinedTextField(
             value = code,
@@ -77,11 +78,11 @@ fun EmailVerificationScreen(
         TextButton(
             onClick = {
                 onResendCode { result ->
-                    if (result == null) { cooldown = 60; message = "A new code has been sent" }
+                    if (result == null) { cooldown = 60; message = "A new verification email has been sent" }
                     else error = result
                 }
             }, enabled = cooldown == 0
-        ) { Text(if (cooldown > 0) "Resend in ${cooldown}s" else "Resend code") }
+        ) { Text(if (cooldown > 0) "Resend in ${cooldown}s" else "Resend email") }
         TextButton(onClick = onNavigateToLogin) { Text("Back to login") }
     }
 }

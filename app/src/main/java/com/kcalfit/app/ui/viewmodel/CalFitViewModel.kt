@@ -15,6 +15,7 @@ import com.kcalfit.app.data.model.RecipeEntity
 import com.kcalfit.app.data.model.UserEntity
 import com.kcalfit.app.data.model.WeightEntry
 import com.kcalfit.app.data.repository.FoodRepository
+import com.kcalfit.app.data.repository.AuthCallback
 import com.kcalfit.app.data.repository.SupabaseAuthService
 import com.kcalfit.app.CalFitApplication
 import com.kcalfit.app.domain.calculator.ActivityLevel
@@ -89,6 +90,15 @@ fun getTodayDateString(): String {
     return dateFormat.format(Date())
 }
 
+/** Outcome of an auth redirect (email confirmation or password recovery) for navigation to act on. */
+sealed interface AuthCallbackState {
+    data object Idle : AuthCallbackState
+    data object Processing : AuthCallbackState
+    data class SignedIn(val onboarded: Boolean) : AuthCallbackState
+    data object Recovery : AuthCallbackState
+    data class Failed(val message: String) : AuthCallbackState
+}
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class CalFitViewModel(
     private val repository: FoodRepository
@@ -118,6 +128,13 @@ class CalFitViewModel(
     private val _authenticated = MutableStateFlow(false)
     val authenticated: StateFlow<Boolean> = _authenticated.asStateFlow()
     private val _pendingEmail = MutableStateFlow("")
+    private val _authCallback = MutableStateFlow<AuthCallbackState>(AuthCallbackState.Idle)
+    val authCallback: StateFlow<AuthCallbackState> = _authCallback.asStateFlow()
+    // Recovery tokens stay in memory only; after process death the user requests a new link.
+    private var recovery: AuthCallback.Recovery? = null
+    private val _recoveryActive = MutableStateFlow(false)
+    val recoveryActive: StateFlow<Boolean> = _recoveryActive.asStateFlow()
+    private var lastCallbackUri: String? = null
     val pendingEmail: StateFlow<String> = _pendingEmail.asStateFlow()
 
     // Database flows
@@ -339,26 +356,65 @@ class CalFitViewModel(
         }
     }
 
-    fun googleSignInUrl(): String = authService.googleAuthorizationUrl()
-
-    fun finishGoogleSignIn(accessToken: String, refreshToken: String, onResult: (String?, Boolean) -> Unit) {
+    fun signInWithGoogle(idToken: String, nonce: String, onResult: (String?, Boolean) -> Unit) {
         viewModelScope.launch {
             try {
-                val onboarded = acceptSession(authService.sessionFromOAuthTokens(accessToken, refreshToken))
+                val onboarded = acceptSession(authService.signInWithGoogleIdToken(idToken, nonce))
                 onResult(null, onboarded)
-            } catch (e: Exception) { onResult(e.message ?: "Could not complete Google sign-in", false) }
+            } catch (e: Exception) { onResult(authError(e, "Could not complete Google sign-in"), false) }
         }
     }
 
-    fun finishPasswordReset(accessToken: String, refreshToken: String, password: String, onResult: (String?, Boolean) -> Unit) {
+    /** Handles a Supabase redirect once; repeated deliveries of the same URI are ignored. */
+    fun handleAuthCallback(uri: String?) {
+        val callback = AuthCallback.parse(uri)
+        if (callback == AuthCallback.NotAuth || uri == lastCallbackUri) return
+        lastCallbackUri = uri
+        _authCallback.value = AuthCallbackState.Processing
         viewModelScope.launch {
-            try {
-                authService.updatePassword(accessToken, password)
-                val onboarded = acceptSession(authService.sessionFromOAuthTokens(accessToken, refreshToken))
-                onResult(null, onboarded)
-            } catch (e: Exception) { onResult(e.message ?: "Could not update password", false) }
+            // Let the startup session restore finish so it cannot overwrite the new session.
+            _authReady.first { it }
+            _authCallback.value = when (callback) {
+                is AuthCallback.Failure -> AuthCallbackState.Failed(callback.message)
+                is AuthCallback.SignIn -> try {
+                    AuthCallbackState.SignedIn(acceptSession(authService.sessionFromOAuthTokens(callback.accessToken, callback.refreshToken)))
+                } catch (e: Exception) { AuthCallbackState.Failed(authError(e, "Could not complete sign-in")) }
+                is AuthCallback.Recovery -> try {
+                    authService.sessionFromOAuthTokens(callback.accessToken, callback.refreshToken)
+                    recovery = callback
+                    _recoveryActive.value = true
+                    AuthCallbackState.Recovery
+                } catch (e: Exception) { AuthCallbackState.Failed(authError(e, "This password-reset link is invalid or has expired.")) }
+                AuthCallback.NotAuth -> AuthCallbackState.Idle
+            }
         }
     }
+
+    fun consumeAuthCallback() { _authCallback.value = AuthCallbackState.Idle }
+
+    fun finishPasswordReset(password: String, onResult: (String?, Boolean) -> Unit) {
+        val pending = recovery
+            ?: return onResult("This password-reset session has expired. Request a new reset email.", false)
+        viewModelScope.launch {
+            try {
+                // Refresh first: the link's access token may have expired while the user typed.
+                val session = try { authService.refresh(pending.refreshToken) }
+                catch (e: SupabaseAuthService.AuthHttpException) {
+                    recovery = null
+                    _recoveryActive.value = false
+                    return@launch onResult("This password-reset session has expired. Request a new reset email.", false)
+                }
+                recovery = AuthCallback.Recovery(session.accessToken, session.refreshToken)
+                authService.updatePassword(session.accessToken, password)
+                recovery = null
+                _recoveryActive.value = false
+                onResult(null, acceptSession(session))
+            } catch (e: Exception) { onResult(authError(e, "Could not update password"), false) }
+        }
+    }
+
+    private fun authError(e: Exception, fallback: String): String =
+        if (e is java.io.IOException) "Network error. Check your connection and try again." else e.message ?: fallback
 
     private suspend fun acceptSession(session: SupabaseAuthService.Session): Boolean {
         coachJob?.cancelAndJoin()

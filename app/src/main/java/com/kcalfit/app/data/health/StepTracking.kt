@@ -31,6 +31,8 @@ class StepTracking(private val context:Context) {
         prefs.getString("source","")=="sensor" && prefs.contains("sensor_$date") -> prefs.getLong("sensor_$date",0)
         else -> null
     }
+    /** Only the device sensor updates as the user moves; Health Connect totals sync every 15 minutes. */
+    fun liveSensorCount(date:String=LocalDate.now().toString()):Long? = if(prefs.getString("source","")=="sensor" && prefs.contains("sensor_$date")) prefs.getLong("sensor_$date",0) else null
     fun distance(date:String=LocalDate.now().toString()):Double? = if(prefs.getString("source","")=="health" && prefs.contains("distance_$date")) Double.fromBits(prefs.getLong("distance_$date",0)) else null
     suspend fun sync(background:Boolean=false):Boolean {
         if(!available || prefs.getString("source","")!="health") return false

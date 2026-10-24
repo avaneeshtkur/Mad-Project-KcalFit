@@ -34,6 +34,7 @@ android {
         buildConfigField("String", "PLAY_PREMIUM_PRODUCT_ID", "\"${authSetting("PLAY_PREMIUM_PRODUCT_ID")}\"")
         buildConfigField("String", "SUPABASE_URL", "\"${authSetting("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL")}\"")
         buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${authSetting("SUPABASE_PUBLISHABLE_KEY", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY")}\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${authSetting("GOOGLE_WEB_CLIENT_ID")}\"")
         buildConfigField("String", "OPEN_FOOD_FACTS_CONTACT", "\"${authSetting("OPEN_FOOD_FACTS_CONTACT")}\"")
     }
 
@@ -66,6 +67,7 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.10.0")
     implementation("androidx.credentials:credentials:1.5.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
+    implementation(libs.google.googleid)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)

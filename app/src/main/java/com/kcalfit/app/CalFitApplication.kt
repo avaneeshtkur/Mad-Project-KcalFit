@@ -27,6 +27,8 @@ class CalFitApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        // A live workout exists only in memory, so a notification surviving from an earlier process is stale.
+        com.kcalfit.app.data.workout.WorkoutNotifications.cancel(this)
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             FoodAssetImporter.importIfNeeded(this@CalFitApplication, database.foodItemDao())
             repository.foodSearch.invalidate()

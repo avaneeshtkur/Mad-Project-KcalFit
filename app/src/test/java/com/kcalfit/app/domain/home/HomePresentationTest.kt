@@ -24,3 +24,23 @@ class HomePresentationTest {
         assertEquals(0f,calorieRingProgress(10,0),0f)
     }
 }
+
+class StepsDisplayTest {
+    private lateinit var locale: java.util.Locale
+    @org.junit.Before fun useUsLocale() { locale = java.util.Locale.getDefault(); java.util.Locale.setDefault(java.util.Locale.US) }
+    @org.junit.After fun restoreLocale() { java.util.Locale.setDefault(locale) }
+
+    @Test fun missingStepDataIsNotShownAsZero() {
+        val display = stepsDisplay(null)
+        assertEquals("Not connected", display.value)
+        assertNull(display.progress)
+    }
+
+    @Test fun realReadingsIncludingZeroAreShown() {
+        assertEquals("0", stepsDisplay(0).value)
+        assertEquals(0f, stepsDisplay(0).progress!!, 0f)
+        assertEquals("6,512", stepsDisplay(6_512).value)
+        assertEquals("of 10,000", stepsDisplay(6_512).detail)
+        assertEquals(1f, stepsDisplay(25_000).progress!!, 0f)
+    }
+}

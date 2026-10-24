@@ -19,13 +19,14 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.*
 import com.kcalfit.app.R
+import com.kcalfit.app.domain.home.stepsDisplay
 import com.kcalfit.app.ui.viewmodel.CalFitUiState
 import com.kcalfit.app.ui.components.CalorieGoalDialog
 import com.kcalfit.app.ui.navigation.Screen
 import com.kcalfit.app.ui.nakafit.NakaRoutes
 import kotlin.math.roundToInt
 
-@Composable fun ReferenceCalorieCard(state:CalFitUiState,modifier:Modifier=Modifier) {
+@Composable fun ReferenceCalorieCard(state:CalFitUiState,modifier:Modifier=Modifier,steps:Long?=null,onSteps:(()->Unit)?=null) {
     val remaining=state.dailyGoal-state.totalCalories+state.caloriesBurned
     val animated by animateIntAsState(kotlin.math.abs(remaining),tween(650),label="Confirmed remaining calories")
     val budget = (state.dailyGoal + state.caloriesBurned).coerceAtLeast(1)
@@ -48,6 +49,24 @@ import kotlin.math.roundToInt
                 listOf(Triple(R.drawable.reference_icon_flag,"Base Goal",state.dailyGoal),Triple(R.drawable.reference_icon_cutlery,"Food",state.totalCalories),Triple(R.drawable.reference_icon_fire,"Exercise",state.caloriesBurned)).forEach{(icon,label,value)->
                     Row(verticalAlignment=Alignment.CenterVertically){ReferenceIcon(icon,null);Spacer(Modifier.width(12.dp));Column{Text(label,fontSize=12.sp);Text("%,d".format(value),fontSize=12.sp)}}
                 }
+            }
+        }
+        // Today's steps sit with the top statistics; the step source and its updates are unchanged.
+        if(onSteps!=null){
+            val display=stepsDisplay(steps)
+            HorizontalDivider(Modifier.padding(top=12.dp),color=ReferenceStyle.RingTrack)
+            Column(Modifier.fillMaxWidth().clickable(onClick=onSteps).padding(top=10.dp).semantics(mergeDescendants=true){
+                contentDescription=if(steps==null)"Steps: not connected. Tap to set up step counting." else "Steps today: ${display.value} ${display.detail}"
+            }){
+                Row(verticalAlignment=Alignment.CenterVertically){
+                    ReferenceIcon(R.drawable.reference_icon_shoe,null,tint=ReferenceStyle.Steps);Spacer(Modifier.width(12.dp))
+                    Text("Steps",Modifier.weight(1f).padding(end=8.dp),fontSize=12.sp)
+                    Column(horizontalAlignment=Alignment.End){
+                        Text(display.value,fontWeight=FontWeight.Bold,fontSize=16.sp)
+                        Text(display.detail,fontSize=12.sp,color=ReferenceStyle.Muted)
+                    }
+                }
+                display.progress?.let{progress->LinearProgressIndicator(progress={progress},Modifier.fillMaxWidth().padding(top=8.dp),color=ReferenceStyle.Steps,trackColor=ReferenceStyle.RingTrack)}
             }
         }
     }
@@ -75,7 +94,7 @@ import kotlin.math.roundToInt
             TextButton({navigate(Screen.Nutrition.route)}){Text("See how else to boost your progress!",fontSize=12.sp)}
         }
         HorizontalPager(pager,contentPadding=PaddingValues(start=16.dp,end=34.dp),pageSpacing=16.dp){page->
-            if(page==0)ReferenceCalorieCard(state,Modifier.fillMaxWidth())
+            if(page==0)ReferenceCalorieCard(state,Modifier.fillMaxWidth(),steps){navigate("health_connect")}
             else ReferenceCard(Modifier.fillMaxWidth().heightIn(min=198.dp)){
                 val labels=listOf("","Protein","Carbohydrates","Fat");val values=listOf(0.0,state.totalProteinGrams,state.totalCarbsGrams,state.totalFatGrams);val targets=listOf(0,state.targetProteinGrams,state.targetCarbsGrams,state.targetFatGrams)
                 Text(labels[page],fontSize=23.sp);Spacer(Modifier.height(20.dp));Text("${values[page].roundToInt()} / ${targets[page]} g",fontSize=28.sp)
@@ -85,10 +104,7 @@ import kotlin.math.roundToInt
         }
         Row(Modifier.align(Alignment.CenterHorizontally).padding(14.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){repeat(4){Box(Modifier.size(7.dp).background(if(pager.currentPage==it)ReferenceStyle.Blue else ReferenceStyle.Selected,CircleShape))}}
         if(!premium){TextButton({navigate(NakaRoutes.Premium)},Modifier.align(Alignment.CenterHorizontally)){Text("Explore kcalfit Premium")}}
-        Row(Modifier.padding(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(16.dp)){
-            ReferenceCard(Modifier.weight(1f).clickable{navigate("health_connect")}){Text("Steps",fontWeight=FontWeight.SemiBold);Row(verticalAlignment=Alignment.CenterVertically){ReferenceIcon(R.drawable.reference_icon_shoe,null,tint=ReferenceStyle.Steps);Text(steps?.let{"%,d".format(it)}?:"Connect",Modifier.padding(6.dp),fontWeight=FontWeight.Bold)};Text("Goal: 10,000 steps",fontSize=12.sp,color=ReferenceStyle.Muted);LinearProgressIndicator(progress={((steps?:0L).toFloat()/10000f).coerceIn(0f,1f)},Modifier.fillMaxWidth().padding(top=12.dp),color=ReferenceStyle.Steps,trackColor=ReferenceStyle.RingTrack)}
-            ReferenceCard(Modifier.weight(1f).clickable{navigate(NakaRoutes.ExerciseLog)}){Row{Text("Exercise",Modifier.weight(1f),fontWeight=FontWeight.SemiBold);Icon(Icons.Default.Add,"Log exercise",Modifier.size(20.dp))};Row(verticalAlignment=Alignment.CenterVertically){ReferenceIcon(R.drawable.reference_icon_fire,null);Text("${state.caloriesBurned} cal",Modifier.padding(6.dp),color=ReferenceStyle.Muted)};Row(verticalAlignment=Alignment.CenterVertically){ReferenceIcon(R.drawable.reference_icon_clock,null,tint=ReferenceStyle.Warning);Text("%.2f hr".format(state.exerciseEntries.sumOf{it.durationMinutes}/60.0),Modifier.padding(6.dp),color=ReferenceStyle.Muted)}}
-        }
+        ReferenceCard(Modifier.padding(horizontal=16.dp).fillMaxWidth().clickable{navigate(Screen.Exercise.route)}){Row{Text("Exercise",Modifier.weight(1f),fontWeight=FontWeight.SemiBold);Icon(Icons.Default.Add,"Log exercise",Modifier.size(20.dp))};Row(verticalAlignment=Alignment.CenterVertically){ReferenceIcon(R.drawable.reference_icon_fire,null);Text("${state.caloriesBurned} cal",Modifier.padding(6.dp),color=ReferenceStyle.Muted)};Row(verticalAlignment=Alignment.CenterVertically){ReferenceIcon(R.drawable.reference_icon_clock,null,tint=ReferenceStyle.Warning);Text("%.2f hr".format(state.exerciseEntries.sumOf{it.durationMinutes}/60.0),Modifier.padding(6.dp),color=ReferenceStyle.Muted)}}
         ReferenceCard(Modifier.padding(16.dp).fillMaxWidth().clickable{navigate(Screen.Weight.route)}){Text("Weight",fontSize=23.sp);Text("${state.latestWeightKg} kg",fontSize=26.sp);Text("Log and view your weight",color=ReferenceStyle.Muted,fontSize=12.sp)}
     }
     if(edit)CalorieGoalDialog(state.dailyGoal,{edit=false},{onGoal(it);edit=false})

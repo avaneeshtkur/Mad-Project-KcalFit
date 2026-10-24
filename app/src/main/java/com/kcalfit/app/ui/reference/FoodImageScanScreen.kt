@@ -36,11 +36,16 @@ import kotlin.math.roundToInt
     var benefits by remember{mutableStateOf<Entitlement?>(null)};var candidates by remember{mutableStateOf<List<Pair<ScanIngredient,List<FoodItemEntity>>>>(emptyList())}
     var consent by rememberSaveable{mutableStateOf(false)}
     LaunchedEffect(Unit){runCatching{api.entitlement()}.onSuccess{benefits=it}}
-    LaunchedEffect(photo){if(photo.isNotBlank())runCatching{withContext(Dispatchers.IO){decodeMealImage(context,Uri.parse(photo))}}.onSuccess{bitmap=it}.onFailure{error="Could not read this image. Choose another photo."}}
-    fun chosen(uri:Uri){photo=uri.toString();requestId=UUID.randomUUID().toString();candidates=emptyList();error=null}
+    LaunchedEffect(photo,requestId){
+        bitmap=null
+        if(photo.isNotBlank())try{bitmap=withContext(Dispatchers.IO){decodeMealImage(context,Uri.parse(photo))}}
+        catch(e:CancellationException){throw e}
+        catch(_:Exception){error="Could not read this image. Choose another photo."}
+    }
+    fun chosen(uri:Uri){bitmap=null;photo=uri.toString();requestId=UUID.randomUUID().toString();candidates=emptyList();error=null}
     val gallery=rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()){it?.let{uri->chosen(uri)}}
     val camera=rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()){success->if(success)chosen(Uri.parse(cameraUri))}
-    fun capture(){val file=File.createTempFile("meal-",".jpg",context.cacheDir);val uri=FileProvider.getUriForFile(context,"${context.packageName}.meal-images",file);cameraUri=uri.toString();camera.launch(uri)}
+    fun capture(){try{val file=File.createTempFile("meal-",".jpg",context.cacheDir);val uri=FileProvider.getUriForFile(context,"${context.packageName}.meal-images",file);cameraUri=uri.toString();camera.launch(uri)}catch(_:Exception){error="Camera is unavailable. Choose a gallery photo instead."}}
     val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){if(it)capture() else error="Camera access was declined. You can choose a gallery photo."}
     NakaPage("Scan food",onBack){
         Text("${benefits?.let{if(it.premium)"Premium scanning" else "${it.freeRemaining} of 5 free scans remaining"}?:"Scan allowance is verified by your account’s server."}")

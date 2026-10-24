@@ -304,8 +304,12 @@ class CalFitViewModel(
         }
     }
 
-    fun lookupBarcode(barcode: String, onResult: (FoodItemEntity?) -> Unit) {
-        viewModelScope.launch { onResult(repository.findFoodByBarcode(barcode.trim())) }
+    fun lookupBarcode(barcode: String, onResult: (FoodItemEntity?, String?) -> Unit) {
+        viewModelScope.launch {
+            try { onResult(repository.findFoodByBarcode(barcode.trim()), null) }
+            catch (e: CancellationException) { throw e }
+            catch (_: Exception) { onResult(null, "Could not look up this barcode. Check your connection and try again.") }
+        }
     }
 
     // Auth & Verification
@@ -331,12 +335,41 @@ class CalFitViewModel(
         }
     }
 
+    private val loginPrefs = CalFitApplication.instance.getSharedPreferences("login_throttle", android.content.Context.MODE_PRIVATE)
+    private val loginThrottle = com.kcalfit.app.domain.auth.LoginThrottle(loginPrefs.getInt("failures", 0), loginPrefs.getLong("blocked_until", 0))
+    private val _loginRetryAfter = MutableStateFlow(loginThrottle.remainingSeconds())
+    val loginRetryAfter = _loginRetryAfter.asStateFlow()
+    private var loginInProgress = false
+    init {
+        viewModelScope.launch {
+            while (true) {
+                _loginRetryAfter.value = loginThrottle.remainingSeconds()
+                kotlinx.coroutines.delay(1000)
+            }
+        }
+    }
+    private fun persistLoginThrottle() {
+        loginPrefs.edit().putInt("failures", loginThrottle.failures).putLong("blocked_until", loginThrottle.blockedUntil).apply()
+        _loginRetryAfter.value = loginThrottle.remainingSeconds()
+    }
+
     fun loginUser(email: String, password: String, onResult: (String?, Boolean) -> Unit) {
+        val remaining = loginThrottle.remainingSeconds()
+        if (remaining > 0) { onResult("Too many attempts. Retry after $remaining seconds.", false); return }
+        if (loginInProgress) { onResult("Sign-in is already in progress.", false); return }
+        loginInProgress = true
         viewModelScope.launch {
             try {
                 val onboarded = acceptSession(authService.login(email, password))
+                loginThrottle.reset(); persistLoginThrottle()
                 onResult(null, onboarded)
-            } catch (e: Exception) { onResult(e.message ?: "Could not log in", false) }
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                if (e is SupabaseAuthService.AuthHttpException && e.errorCode == "invalid_credentials") loginThrottle.failed()
+                if (e is SupabaseAuthService.AuthHttpException && e.status == 429) loginThrottle.blockedUntil = System.currentTimeMillis() + 60_000
+                persistLoginThrottle()
+                onResult(if (_loginRetryAfter.value > 0) "Too many attempts. Retry after 60 seconds." else e.message ?: "Could not log in", false)
+            } finally { loginInProgress = false }
         }
     }
 
@@ -625,7 +658,6 @@ class CalFitViewModel(
 
     private var coachJob: Job? = null
     private val coach = FitnessChatbot()
-    private val coachResponder = CoachResponder()
     private val _coachBusy = MutableStateFlow(false)
     val coachBusy = _coachBusy.asStateFlow()
     private val _coachAction = MutableStateFlow<CoachAction?>(null)
@@ -647,13 +679,11 @@ class CalFitViewModel(
                     uiState.value.dailyGoal, _selectedDate.value, repository.getAllExerciseEntries().first().map { it.date },
                     uiState.value.userProfile?.exerciseDaysPerWeek ?: 0, uiState.value.targetProteinGrams,
                     uiState.value.targetCarbsGrams, uiState.value.targetFatGrams)
-                val (request, localReply) = withContext(Dispatchers.Default) { coach.answer(query, data) }
-                val reply = coachResponder.respond(query, localReply,
-                    request.intent in setOf(CoachIntent.WORKOUT, CoachIntent.TECHNIQUE))
+                val (_, reply) = withContext(Dispatchers.Default) { coach.answer(query, data) }
                 repository.sendCoachMessage(reply.message, "COACH")
                 _coachAction.value = reply.action
             } catch (e: CancellationException) { throw e }
-            catch (_: Exception) { _coachError.value = "Couldn't read or save this conversation. Please try again." }
+            catch (e: Exception) { _coachError.value = e.message ?: "Coach is unavailable. Please try again." }
             finally { _coachBusy.value = false }
         }
     }

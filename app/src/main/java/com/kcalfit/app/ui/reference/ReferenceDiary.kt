@@ -28,12 +28,9 @@ import kotlin.math.*
         IconButton({onDate(LocalDate.parse(date).plusDays(if(weekly)7 else 1).toString())}){Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight,"Next ${if(weekly)"week" else "day"}")}
     }
 }
-@Composable fun ReferenceDiary(state:CalFitUiState,onBack:()->Unit,onDate:(String)->Unit,onAdd:(MealType)->Unit,onFood:(FoodEntry)->Unit,onDelete:(FoodEntry)->Unit,onNutrition:()->Unit,onFast:()->Unit) {
+@Composable fun ReferenceDiary(state:CalFitUiState,onBack:()->Unit,onDate:(String)->Unit,onAdd:(MealType)->Unit,onFood:(FoodEntry)->Unit,onDelete:(FoodEntry)->Unit,onNutrition:()->Unit) {
     var deletion by remember{mutableStateOf<FoodEntry?>(null)}
     var menu by remember{mutableStateOf(false)}
-    var now by remember{mutableLongStateOf(System.currentTimeMillis())}
-    val fast=state.activeFastingSession?.takeIf{!it.isCompleted}
-    LaunchedEffect(fast?.id){while(fast!=null){now=System.currentTimeMillis();delay(1000)}}
     Column(Modifier.fillMaxSize()){
         ReferenceHeader("Diary",onBack){IconButton(onNutrition){ReferenceIcon(R.drawable.reference_icon_pie,"Nutrition")};Box{IconButton({menu=true}){Icon(Icons.Default.MoreVert,"Diary menu")};DropdownMenu(menu,{menu=false}){DropdownMenuItem(text={Text("Nutrition summary")},onClick={menu=false;onNutrition()});DropdownMenuItem(text={Text("Add a snack")},onClick={menu=false;onAdd(MealType.SNACK)})}}}
         ReferenceDate(state.selectedDate,onDate)
@@ -42,18 +39,6 @@ import kotlin.math.*
             Column(Modifier.fillMaxWidth().clickable(onClick=onNutrition).padding(16.dp)){
                 Row{Text("Calories remaining",Modifier.weight(1f),fontWeight=FontWeight.SemiBold,fontSize=14.sp);Icon(Icons.Default.ChevronRight,null)}
                 Row(Modifier.fillMaxWidth().padding(top=18.dp),horizontalArrangement=Arrangement.SpaceBetween){listOf(state.dailyGoal to "Goal",state.totalCalories to "Food",state.caloriesBurned to "Exercise",(state.dailyGoal-state.totalCalories+state.caloriesBurned) to "Remaining").forEachIndexed{i,(value,label)->if(i>0)Text(listOf("","−","+","=")[i],color=ReferenceStyle.Muted);Column(horizontalAlignment=Alignment.CenterHorizontally){Text("%,d".format(value),fontSize=14.sp);Text(label,fontSize=12.sp,color=ReferenceStyle.Muted,modifier=Modifier.padding(top=8.dp))}}}
-            }
-            HorizontalDivider(thickness=7.dp,color=Color(0xFFCFCDDA))
-            Column(Modifier.fillMaxWidth().padding(16.dp),horizontalAlignment=Alignment.CenterHorizontally){
-                Text("Fasting",Modifier.fillMaxWidth(),fontWeight=FontWeight.SemiBold,fontSize=14.sp)
-                Box(Modifier.fillMaxWidth().height(100.dp),contentAlignment=Alignment.BottomCenter){
-                    val elapsed=if(fast==null)0L else (now-fast.startTimeMillis).coerceAtLeast(0)/1000
-                    Canvas(Modifier.width(210.dp).height(90.dp)){
-                        repeat(20){i->val angle=Math.toRadians(200.0+i*7.4);val center=Offset(size.width/2,size.height);val start=Offset(center.x+cos(angle).toFloat()*size.width*.43f,center.y+sin(angle).toFloat()*size.height*.9f);val end=Offset(center.x+cos(angle).toFloat()*size.width*.34f,center.y+sin(angle).toFloat()*size.height*.7f);drawLine(if(fast!=null && i<elapsed.toFloat()/(fast.targetDurationHours*3600)*20)ReferenceStyle.Fat else ReferenceStyle.Line,start,end,7.dp.toPx(),StrokeCap.Round)}
-                    }
-                    Text("%02dh %02dm %02ds".format(elapsed/3600,elapsed/60%60,elapsed%60),fontWeight=FontWeight.Bold)
-                }
-                OutlinedButton(onFast,shape=CircleShape){Text(if(fast==null)"Start Fast" else "Ⅱ Stop Fast",color=ReferenceStyle.Fat)}
             }
             MealType.entries.forEach{meal->
                 val entries=state.selectedDateEntries.filter{MealType.fromString(it.mealType)==meal}

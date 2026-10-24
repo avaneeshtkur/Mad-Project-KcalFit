@@ -70,48 +70,24 @@ private fun AuthField(label: String, value: String, onChange: (String) -> Unit,
 }
 
 @Composable
-fun LoginScreen(onLoginSuccess: (String, String, Boolean) -> Unit, onNavigateToRegister: () -> Unit,
+fun LoginScreen(onLoginSuccess: (String, String) -> Unit, onNavigateToRegister: () -> Unit,
     onNavigateToForgotPassword: () -> Unit, errorMessage: String? = null, isLoading: Boolean = false,
-    onGoogleSignIn: () -> Unit = {}, modifier: Modifier = Modifier) {
+    onGoogleSignIn: () -> Unit = {}, modifier: Modifier = Modifier, retryAfterSeconds: Int = 0) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var saveWithManager by rememberSaveable { mutableStateOf(false) }
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var retrieving by remember { mutableStateOf(false) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
     AuthPhotoShell("Welcome back", "Sign in to continue your fitness journey.", R.drawable.nakafit_runner, modifier) {
         AuthField("Email address", email, { email = it; error = null }, type = KeyboardType.Email)
         AuthField("Password", password, { password = it; error = null }, password = true, type = KeyboardType.Password)
-        NakaButton(if (retrieving) "Opening password manager…" else "Use Saved Password", {
-            scope.launch {
-                retrieving = true
-                try {
-                    val credential = PasswordManager(context).retrieve(context)
-                    if (credential != null) { email = credential.id; password = credential.password; error = null }
-                } catch (_: androidx.credentials.exceptions.GetCredentialCancellationException) {
-                    // User dismissed the provider; manual login remains available.
-                } catch (_: androidx.credentials.exceptions.NoCredentialException) {
-                    error = "No saved password found. Sign in manually and select Save with password manager."
-                } catch (_: Exception) { error = "Password manager is unavailable. You can still sign in manually." }
-                finally { retrieving = false }
-            }
-        }, enabled = !isLoading && !retrieving, outlined = true)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(saveWithManager, { saveWithManager = it })
-            Text("Save with password manager", color = MaterialTheme.colorScheme.onSurface)
-        }
-        Text("Your password manager stores the password. kcalfit keeps your signed-in session.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
         TextButton(onNavigateToForgotPassword, Modifier.align(Alignment.End)) { Text("Forgot password?", color = MaterialTheme.colorScheme.onSurface) }
         (errorMessage ?: error)?.let { Text(it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp) }
-        NakaButton(if (isLoading) "Signing in…" else "Sign In", {
+        NakaButton(if (retryAfterSeconds > 0) "Retry after $retryAfterSeconds seconds" else if (isLoading) "Signing in…" else "Sign In", {
             when {
                 !Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches() -> error = "Enter a valid email address"
                 password.isBlank() -> error = "Enter your password"
-                else -> onLoginSuccess(email.trim(), password, saveWithManager)
+                else -> onLoginSuccess(email.trim(), password)
             }
-        }, enabled = !isLoading)
+        }, enabled = !isLoading && retryAfterSeconds == 0)
         OutlinedButton(onGoogleSignIn, Modifier.fillMaxWidth().height(50.dp), enabled = !isLoading,
             shape = RoundedCornerShape(28.dp)) { Text("Continue with Google") }
         Row(Modifier.align(Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {

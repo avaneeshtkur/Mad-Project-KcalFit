@@ -69,6 +69,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "cal_fit_database"
                 )
+                    .fallbackToDestructiveMigration()
                     .addMigrations(object : Migration(5, 6) {
                         override fun migrate(db: SupportSQLiteDatabase) {
                             db.execSQL("ALTER TABLE food_entries ADD COLUMN nutritionKnown INTEGER NOT NULL DEFAULT 1")

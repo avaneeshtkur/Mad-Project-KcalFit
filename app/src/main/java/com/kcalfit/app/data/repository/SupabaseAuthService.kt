@@ -10,7 +10,7 @@ import java.net.URLEncoder
 
 /** Supabase Auth's public REST API. No service-role key or local OTP is used. */
 class SupabaseAuthService {
-    class AuthHttpException(val status: Int, message: String) : IllegalStateException(message)
+    class AuthHttpException(val status: Int, message: String, val errorCode: String = "") : IllegalStateException(message)
     data class Session(val userId: String, val email: String, val name: String, val accessToken: String, val refreshToken: String, val metadata: JSONObject)
     companion object { const val APP_AUTH_REDIRECT = "com.kcalfit.app://auth/callback" }
 
@@ -40,7 +40,7 @@ class SupabaseAuthService {
             if (connection.responseCode !in 200..299) {
                 val code = json.optString("error_code")
                 val message = if (code == "user_already_exists" || code == "email_exists") "An account already exists." else json.optString("msg", json.optString("message", "Authentication failed"))
-                throw AuthHttpException(connection.responseCode, message)
+                throw AuthHttpException(connection.responseCode, message, code)
             }
             json
         } finally {

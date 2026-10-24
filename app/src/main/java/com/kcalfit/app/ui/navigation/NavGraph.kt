@@ -147,23 +147,17 @@ fun NavGraph(navController: NavHostController, viewModel: CalFitViewModel, userP
             composable(Screen.Login.route) {
                 var error by remember { mutableStateOf<String?>(null) }
                 var loading by remember { mutableStateOf(false) }
-                LoginScreen(onLoginSuccess = { email, password, savePassword ->
+                val retryAfter by viewModel.loginRetryAfter.collectAsState()
+                LoginScreen(onLoginSuccess = { email, password ->
                     loading = true; error = null
                     viewModel.loginUser(email, password) { result, onboarded ->
                         if (result == null) scope.launch {
-                            if (savePassword) {
-                                try { PasswordManager(context).save(context, email, password) }
-                                catch (_: androidx.credentials.exceptions.CreateCredentialCancellationException) { }
-                                catch (_: Exception) {
-                                    android.widget.Toast.makeText(context, "Signed in. Password saving is unavailable from this provider.", android.widget.Toast.LENGTH_LONG).show()
-                                }
-                            }
                             loading = false
                             navController.navigate(if (onboarded) Screen.Home.route else Screen.Onboarding.route) { popUpTo(Screen.Welcome.route) { inclusive = true } }
                         } else { loading = false; error = result }
                     }
                 }, onNavigateToRegister = { navigate(Screen.Register.route) }, onNavigateToForgotPassword = { navigate(Screen.ForgotPassword.route) }, errorMessage = error, isLoading = loading || googleInProgress,
-                    onGoogleSignIn = { launchGoogle() })
+                    onGoogleSignIn = { launchGoogle() }, retryAfterSeconds = retryAfter)
             }
             composable(Screen.Register.route) {
                 var error by remember { mutableStateOf<String?>(null) }
@@ -208,7 +202,7 @@ fun NavGraph(navController: NavHostController, viewModel: CalFitViewModel, userP
                 LaunchedEffect(Unit) { runCatching { tracker.sync() }; steps = tracker.count() }
                 var premium by remember { mutableStateOf(false) }
                 LaunchedEffect(Unit) { runCatching { com.kcalfit.app.data.premium.PremiumApi().entitlement() }.onSuccess { premium = it.premium } }
-                ReferenceDashboard(uiState, ::navigate, ::updateGoal, premium = premium, steps = steps)
+                ReferenceDashboard(uiState, ::navigate, ::updateGoal, premium = premium, steps = steps, onAddFood = ::addFood)
 
             }
             composable(Screen.Exercise.route) {
@@ -233,7 +227,7 @@ fun NavGraph(navController: NavHostController, viewModel: CalFitViewModel, userP
             composable("health_connect") { HealthConnectionScreen(::back) }
             composable(Screen.Diary.route) {
                 ReferenceDiary(uiState, ::back, viewModel::setSelectedDate, ::addFood, ::openMeal, ::deleteFood,
-                    { navigate(Screen.Nutrition.route) }, viewModel::toggleFasting)
+                    { navigate(Screen.Nutrition.route) })
             }
             composable(Screen.Track.route) {
                 TrackScreen(uiState, userPreferences.getAuthUserId(),
@@ -278,7 +272,7 @@ fun NavGraph(navController: NavHostController, viewModel: CalFitViewModel, userP
             }
             composable(Screen.BarcodeLookup.route) {
                 BarcodeLookupScreen(viewModel::lookupBarcode, { food -> selectedCatalogueFood = food; navigate(Screen.AddFood.route) },
-                    { addFood(addFoodMeal) }, ::back)
+                    { addFood(addFoodMeal) }, ::back, onScanImage = { navigate("food_image_scan") })
             }
             composable(Screen.AddFood.route) {
                 AddFoodScreen(initialMealType = addFoodMeal,

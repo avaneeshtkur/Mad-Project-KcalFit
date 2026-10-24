@@ -96,6 +96,9 @@ class FitnessChatbot(private val clockMillis: () -> Long = System::currentTimeMi
         if (has("where|how") && has("nutrition|track|app|food entr"))
             return request(CoachIntent.CLARIFY,"Use Nutrition for meal entries, Track for activity and progress, and the trash icon beside a saved food to delete it. Say ‘Open Nutrition’ to get a shortcut.")
         if (has("workout|exercise")) return request(CoachIntent.CLARIFY,"Would you like a beginner workout, technique for squats, planks or push-ups, or to open Exercises?")
+        if (has("water|hydration|drink|dehydrat")) return request(CoachIntent.CLARIFY,"Hydration supports training and recovery. Sip water regularly through the day, drink more around sweaty exercise, and use thirst and pale urine as simple guides. If you have a fluid restriction or medical condition, follow your clinician's advice.")
+        if (has("sleep|rest|recover|recovery|sore|muscle pain")) return request(CoachIntent.CLARIFY,"Recovery matters as much as training. Prioritize consistent sleep, easy movement on rest days, and gradual increases in workload. Stop exercise for sharp pain, chest pain, faintness or unusual shortness of breath.")
+        if (has("warm.?up|stretch|cool.?down|mobility")) return request(CoachIntent.CLARIFY,"Warm up with five to ten minutes of easy movement, then use controlled range-of-motion drills for the muscles you will train. Cool down with easy movement and comfortable stretches; never force a painful range.")
         if (has("calorie|protein|nutrition|food|serving|rice|egg")) return request(CoachIntent.CLARIFY,"Which food and preparation, and how much (for example, grams or the package serving)? If this food isn't in the local catalogue, use the package label in Add Food; I don't have an online nutrition database.")
         return request(CoachIntent.OUTSIDE)
     }
